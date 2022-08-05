@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2021 Solidigm.
+# Copyright 2021 Solidigm.
 # SPDX-License-Identifier: BSD-3-Clause
 
 # User configurable variables
