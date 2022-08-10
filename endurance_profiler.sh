@@ -157,8 +157,10 @@ function loop() {
 			send_to_db "smart.temperature ${_temperature} $(date +%s)"
 			_percentage_used=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep percentage_used | awk '{print $3}' | sed 's/[^0-9]*//g')
 			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"
+			_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
+			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
 			
-			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}"
+			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}"
 			_counter=0
 		fi
 		# this block will run every second
