@@ -34,6 +34,10 @@ Resets the workload timer.
 
 Prints the Write Amplification Factor (WAF) and other information for the NVMe SSD.
 
+**clean**
+
+Removes all the files that were created when running the tool. Including the log file. 
+
 **setDevice nvmeXnX**
 
 Sets the NVMe device to be monitored.  
@@ -46,7 +50,7 @@ The option is required before the service can be started.
 Calling the script without a parameter will result in printing the supported options.
 ```
 # ./endurance_profiler.sh
-[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice]
+[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|clean]
 ```
 Check the status of the service:
 ```
@@ -81,6 +85,7 @@ Check the Write Amplification Info:
 # ./endurance_profiler.sh WAFinfo
 Drive                            : Intel(R) SSD DC P5316   Series 15362GB
 Serial number                    : PHAC121300TN15PHGN
+Firmware version                 : ACV10200
 Device                           : /dev/nvme3n1
 smart.write_amplification_factor : 2.34
 smart.media_wear_percentage      : 0.030%
@@ -98,6 +103,16 @@ Check the status:
 ```
 # ./endurance_profiler.sh status
 [STATUS] Service ./endurance_profiler.sh not running
+```
+Remove all used files:
+```
+# ./endurance_profiler.sh clean
+[CLEAN] Removing used files.
+removed '/var/log/endurance_profiler/endurance_profiler.F4_before.var'
+removed '/var/log/endurance_profiler/endurance_profiler.F5_before.var'
+removed '/var/log/endurance_profiler/endurance_profiler.log'
+removed '/var/log/endurance_profiler/endurance_profiler.nvmenamespace.var'
+removed directory '/var/log/endurance_profiler'
 ```
 ## Configurable variables
 The following variables in the **./endurance_profiler.sh** script are configurable.
@@ -120,6 +135,7 @@ The following SMART attributes are evaluated:
 - host_bytes_written
 - temperature
 - percentage_used
+- drive_life
 
 The following bandwidth metrics are evaluated: 
 - readBW 
