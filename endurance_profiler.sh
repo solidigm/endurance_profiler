@@ -369,7 +369,8 @@ function WAFinfo() {
 	local _VUsmart_E3
 	local _VUsmart_E4
 	local _media_wear_percentage
-	
+	local _firmware
+
 	if status >/dev/null 2>&1 ; then
 		# background process running
 		_nvme_namespace=$(retrieve_nvme_namespace)
