@@ -446,8 +446,21 @@ function showVersion() {
 	return 0
 }
 
+function clean() {
+        if status >/dev/null 2>&1 ; then
+                # background process running
+                log "[CLEAN] Can't remove used files. ${_service} is running."
+                return 1
+        else
+                # background process not running
+                log "[CLEAN] Removing used files."
+                rm -rfv /var/log/"${_filename}"
+		return 0
+        fi
+}
+
 function usage() {
-	local _options="[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|version]"
+	local _options="[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|version|clean]"
 	
 	echo "Usage: $(basename "$1") ${_options}"
 	return 0
@@ -495,6 +508,9 @@ case "$1" in
 		;;
 	version|Version)
 		showVersion
+		;;
+	clean|Clean|CLEAN)
+		clean
 		;;
 	*)
 		usage "$0"
