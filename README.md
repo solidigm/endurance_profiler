@@ -40,7 +40,7 @@ Sets the NVMe device to be monitored.
 This option has one mandatory parameter: the nvme device e.g. nvme1n1  
 The option is required before the service can be started.
 ## Tested Operating Systems
-- Ubuntu 18.04, 20.04  
+- Ubuntu 18.04, 20.04, 22.04  
 - CentOS 7, CentOS 8
 ## Step by step guide 
 Calling the script without a parameter will result in printing the supported options.
