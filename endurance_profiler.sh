@@ -391,13 +391,13 @@ function WAFinfo() {
 		echo "Serial number                    : ${_serial_number}"
 		echo "Firmware version                 : ${_firmware}"
 		echo "Device                           : /dev/${_nvme_namespace}"	
-		echo "smart.write_amplification_factor : ${_WAF}"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
 			echo "smart.media_wear_percentage      : Not Available yet"
 			echo "smart.host_reads                 : Not Available yet"
 			echo "smart.timed_work_load            : less than 60 minutes"
 		else
 			if [[ ${_VUsmart_E2} -eq 0 ]] ; then
+				echo "smart.write_amplification_factor : ${_WAF}"
 				echo "smart.media_wear_percentage      : <0.001%"
 				echo "smart.host_reads                 : ${_VUsmart_E3}%"
 				echo "smart.timed_work_load            : ${_VUsmart_E4} minutes"
@@ -406,6 +406,7 @@ function WAFinfo() {
 				_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
 				_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
 				_drive_life_years=$(echo "scale=3;${_drive_life_minutes}/525600" | bc -l)
+				echo "smart.write_amplification_factor : ${_WAF}"
 				echo "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
 				echo "smart.host_reads                 : ${_VUsmart_E3}%"
 				echo "smart.timed_work_load            : ${_VUsmart_E4} minutes"
