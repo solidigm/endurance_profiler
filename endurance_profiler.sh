@@ -378,6 +378,7 @@ function WAFinfo() {
 		_WAF=$(cat "${_WAFfile}")
 		_market_name="$(nvme get-log /dev/"${_nvme_namespace}" -i 0xdd -l 0x512 -b 2>&1 | tr -d '\0')"
 		_serial_number=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep sn | awk '{print $3}')
+		_firmware=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep "fr " | awk '{print $3}')
 		_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
 		_VUsmart_E2=$(get_smart_log "${_nvme_namespace}" 0x41)
 		_VUsmart_E3=$(get_smart_log "${_nvme_namespace}" 0x4d)
@@ -385,6 +386,7 @@ function WAFinfo() {
 	
 		echo "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
 		echo "Serial number                    : ${_serial_number}"
+		echo "Firmware version                 : ${_firmware}"
 		echo "Device                           : /dev/${_nvme_namespace}"	
 		echo "smart.write_amplification_factor : ${_WAF}"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
