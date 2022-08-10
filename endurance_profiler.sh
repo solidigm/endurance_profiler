@@ -8,6 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
+_version="v1.2-rc"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -115,6 +116,8 @@ function loop() {
 	local _readblocks_new=0
 	local _writeblocks_new=0
 	local _nvme_namespace=$1
+
+	echo "${_service} ${_version}"
 
 	eval "$(awk '{printf "_readblocks_old=\"%s\" _writeblocks_old=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
 	while true; do
@@ -433,8 +436,13 @@ function setDevice() {
 	fi
 }
 
+function showVersion() {
+	echo "Version: ${_version}"
+	return 0
+}
+
 function usage() {
-	local _options="[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice]"
+	local _options="[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|version]"
 	
 	echo "Usage: $(basename "$1") ${_options}"
 	return 0
@@ -479,6 +487,9 @@ case "$1" in
 		;;
 	setDevice|SetDevice|setdevice|SETDEVICE)
 		setDevice "$2"
+		;;
+	version|Version)
+		showVersion
 		;;
 	*)
 		usage "$0"
