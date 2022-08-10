@@ -34,6 +34,10 @@ Resets the workload timer.
 
 Prints the Write Amplification Factor (WAF) and other information for the NVMe SSD.
 
+**version**
+
+Shows the version of the tool.
+
 **clean**
 
 Removes all the files that were created when running the tool. Including the log file. 
@@ -50,7 +54,7 @@ The option is required before the service can be started.
 Calling the script without a parameter will result in printing the supported options.
 ```
 # ./endurance_profiler.sh
-[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|clean]
+[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|version|clean]
 ```
 Check the status of the service:
 ```
@@ -87,11 +91,11 @@ Drive                            : Intel(R) SSD DC P5316   Series 15362GB
 Serial number                    : PHAC121300TN15PHGN
 Firmware version                 : ACV10200
 Device                           : /dev/nvme3n1
-smart.write_amplification_factor : 2.34
-smart.media_wear_percentage      : 0.030%
-smart.host_reads                 : 81%
-smart.timed_work_load            : 653 minutes
-Drive life                       : 4.007 years (2106451 minutes)
+smart.write_amplification_factor : 1.38
+smart.media_wear_percentage      : 0.029%
+smart.host_reads                 : 20%
+smart.timed_work_load            : 83 minutes
+Drive life                       : 5.539 years (283306 minutes)
 ```
 Stop the service:
 ```
@@ -112,6 +116,7 @@ removed '/var/log/endurance_profiler/endurance_profiler.F4_before.var'
 removed '/var/log/endurance_profiler/endurance_profiler.F5_before.var'
 removed '/var/log/endurance_profiler/endurance_profiler.log'
 removed '/var/log/endurance_profiler/endurance_profiler.nvmenamespace.var'
+removed '/var/log/endurance_profiler/endurance_profiler.timed_work_load_started.var'
 removed directory '/var/log/endurance_profiler'
 ```
 ## Configurable variables
