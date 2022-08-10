@@ -153,7 +153,7 @@ function loop() {
 			# log host write bytes
 			send_to_db "smart.host_bytes_written $(echo "${_VUsmart_F5}*32" | bc -l) $(date +%s)"
 			# log smart attributes
-			_temperature=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep temperature | awk '{print $3}')
+			_temperature=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep temperature | awk '{print $3}' | sed 's/[^0-9]*//g')
 			send_to_db "smart.temperature ${_temperature} $(date +%s)"
 			_percentage_used=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep percentage_used | awk '{print $3}' | cut -c -1)
 			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"
