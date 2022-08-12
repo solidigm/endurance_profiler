@@ -118,6 +118,8 @@ function loop() {
 	local _writeblocks_new=0
 	local _nvme_namespace=$1
 
+	_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
+
 	echo "${_service} ${_version}"
 
 	eval "$(awk '{printf "_readblocks_old=\"%s\" _writeblocks_old=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
@@ -160,8 +162,10 @@ function loop() {
 			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"
 			_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
 			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
-			
-			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}"
+			_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*32000000*1440/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
+			send_to_db "smart.DWPD ${_DWPD} $(date +%s)"
+
+			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}, ${_DWPD}"
 			_counter=0
 		fi
 		# this block will run every second
@@ -352,7 +356,7 @@ function resetWorkloadTimer() {
 		echo 0 > "${_VUsmart_F4_beforefile}"
 		echo 0 > "${_VUsmart_F5_beforefile}"
 		echo 0 > "${_WAFfile}"
-		echo $(date) > "${_timed_work_load_startedfile}"
+		date > "${_timed_work_load_startedfile}"
 		return 0
 	else	
 		# background process not running
@@ -372,6 +376,8 @@ function WAFinfo() {
 	local _VUsmart_E4
 	local _media_wear_percentage
 	local _firmware
+	local _VUsmart_F5_before
+	local _VUsmart_F5
 
 	if status >/dev/null 2>&1 ; then
 		# background process running
@@ -409,11 +415,15 @@ function WAFinfo() {
 				_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
 				_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
 				_drive_life_years=$(echo "scale=3;${_drive_life_minutes}/525600" | bc -l)
+				_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
+				_VUsmart_F5=$(get_smart_log "${_nvme_namespace}" 0x95)
+				_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*32000000*1440/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
 				echo "smart.write_amplification_factor : ${_WAF}"
 				echo "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
 				echo "smart.host_reads                 : ${_VUsmart_E3}%"
 				echo "smart.timed_work_load            : ${_VUsmart_E4} minutes (started on ${_timed_work_load_started})"
 				echo "Drive life                       : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
+				echo "Endurance                        : ${_DWPD} DWPD"
 			fi
 		fi
 		return 0
