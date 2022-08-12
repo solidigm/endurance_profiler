@@ -123,6 +123,7 @@ function loop() {
 	_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
 
 	echo "${_service} ${_version}"
+	echo "date, media_wear_percentage, host_reads, timed_work_load, NAND_bytes_written, host_bytes_written, WAF, temperature, percentage_used, drive_life_minutes, DWPD, dataWritten"
 
 	eval "$(awk '{printf "_readblocks_old=\"%s\" _writeblocks_old=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
 	while true; do
