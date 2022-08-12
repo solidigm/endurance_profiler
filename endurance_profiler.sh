@@ -167,7 +167,7 @@ function loop() {
 			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
 			_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*32000000*1440/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
 			send_to_db "smart.DWPD ${_DWPD} $(date +%s)"
-			_dataWritten=$(echo "scale=0;(_hostWrites)*32000000" | bc -l)
+			_dataWritten=$(echo "scale=0;(${_hostWrites})*32000000" | bc -l)
 			send_to_db "smart.dataWritten ${_dataWritten} $(date +%s)"
 
 			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}, ${_DWPD}, ${_dataWritten}"
