@@ -277,7 +277,7 @@ function start() {
 		if [ -s "${_nvme_namespacefile}" ] ; then
 			_nvme_namespace=$(retrieve_nvme_namespace)
 			if [ "${_nvme_namespace}" == "" ] ; then
-				log "[START] Invalid nvme namespce parameter."
+				log "[START] Invalid nvme namespace parameter."
 				return 1
 			else
 				log "[START] Logging namespace ${_nvme_namespace}. Log filename ${_logfile}"
@@ -350,7 +350,7 @@ function resetWorkloadTimer() {
 		# background process running
 		_nvme_namespace=$(retrieve_nvme_namespace)
 		if [ "${_nvme_namespace}" == "" ] ; then
-			log "[RESETWORKLOADTIMER] Invalid nvme namespce parameter. Workload Timer not reset."
+			log "[RESETWORKLOADTIMER] Invalid nvme namespace parameter. Workload Timer not reset."
 			return 1
 		fi
 		_nvme_device=${_nvme_namespace/%n[0-9]*/} 
@@ -390,7 +390,7 @@ function WAFinfo() {
 		# background process running
 		_nvme_namespace=$(retrieve_nvme_namespace)
 		if [ "${_nvme_namespace}" == "" ] ; then
-			log "[WAFINFO] Invalid nvme namespce parameter."
+			log "[WAFINFO] Invalid nvme namespace parameter."
 			return 1
 		fi
 		_WAF=$(cat "${_WAFfile}")
