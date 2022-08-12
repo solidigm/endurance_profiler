@@ -23,6 +23,9 @@ _timed_work_load_startedfile=/var/log/${_filename}/${_filename}.timed_work_load_
 _db_not_supported="not logged"
 
 _TB_in_bytes=1000000000000
+_host_written_unit=32000000
+_bandwith_blocksize=512
+_minutes_in_day=1440
 
 function check_command() {
 	# Iterate over all function arguments and check if each argument is an installed command
@@ -165,9 +168,9 @@ function loop() {
 			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"
 			_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
 			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
-			_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*32000000*1440/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
+			_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*${_host_written_unit}*${_minutes_in_day}/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
 			send_to_db "smart.DWPD ${_DWPD} $(date +%s)"
-			_dataWritten=$(echo "scale=0;(${_hostWrites})*32000000" | bc -l)
+			_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
 			send_to_db "smart.dataWritten ${_dataWritten} $(date +%s)"
 
 			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}, ${_DWPD}, ${_dataWritten}"
@@ -175,8 +178,8 @@ function loop() {
 		fi
 		# this block will run every second
 		eval "$(awk '{printf "_readblocks_new=\"%s\" _writeblocks_new=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
-		_read_bandwidth=$(echo "(${_readblocks_new}-${_readblocks_old})*512/1000/1000" | bc)
-		_write_bandwidth=$(echo "(${_writeblocks_new}-${_writeblocks_old})*512/1000/1000" | bc)
+		_read_bandwidth=$(echo "(${_readblocks_new}-${_readblocks_old})*${_bandwith_blocksize}/1000/1000" | bc)
+		_write_bandwidth=$(echo "(${_writeblocks_new}-${_writeblocks_old})*${_bandwith_blocksize}/1000/1000" | bc)
 		_readblocks_old=${_readblocks_new}
 		_writeblocks_old=${_writeblocks_new}
 
@@ -425,9 +428,9 @@ function WAFinfo() {
 				_drive_life_years=$(echo "scale=3;${_drive_life_minutes}/525600" | bc -l)
 				_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
 				_VUsmart_F5=$(get_smart_log "${_nvme_namespace}" 0x95)
-				_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*32000000*1440/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
+				_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*${_host_written_unit}*1440/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
 				_hostWrites="${_VUsmart_F5}-${_VUsmart_F5_before}"
-				_dataWritten=$(echo "scale=0;(${_hostWrites})*32000000" | bc -l)
+				_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
 				_dataWrittenTB=$(echo "scale=3;${_dataWritten}/${_TB_in_bytes}" | bc -l)
 				echo "smart.write_amplification_factor : ${_WAF}"
 				echo "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
