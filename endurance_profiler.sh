@@ -22,6 +22,8 @@ _VUsmart_F5_beforefile=/var/log/${_filename}/${_filename}.F5_before.var
 _timed_work_load_startedfile=/var/log/${_filename}/${_filename}.timed_work_load_started.var
 _db_not_supported="not logged"
 
+_TB_in_bytes=1000000000000
+
 function check_command() {
 	# Iterate over all function arguments and check if each argument is an installed command
 	while [ $# -gt 0 ] ; do
@@ -164,8 +166,10 @@ function loop() {
 			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
 			_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*32000000*1440/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
 			send_to_db "smart.DWPD ${_DWPD} $(date +%s)"
+			_dataWritten=$(echo "scale=0;(_hostWrites)*32000000" | bc -l)
+			send_to_db "smart.dataWritten ${_dataWritten} $(date +%s)"
 
-			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}, ${_DWPD}"
+			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}, ${_DWPD}, ${_dataWritten}"
 			_counter=0
 		fi
 		# this block will run every second
@@ -378,6 +382,9 @@ function WAFinfo() {
 	local _firmware
 	local _VUsmart_F5_before
 	local _VUsmart_F5
+	local _hostWrites=0
+	local _dataWritten=0
+	local _dataWrittenTB=0
 
 	if status >/dev/null 2>&1 ; then
 		# background process running
@@ -418,12 +425,16 @@ function WAFinfo() {
 				_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
 				_VUsmart_F5=$(get_smart_log "${_nvme_namespace}" 0x95)
 				_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*32000000*1440/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
+				_hostWrites="${_VUsmart_F5}-${_VUsmart_F5_before}"
+				_dataWritten=$(echo "scale=0;(${_hostWrites})*32000000" | bc -l)
+				_dataWrittenTB=$(echo "scale=3;${_dataWritten}/${_TB_in_bytes}" | bc -l)
 				echo "smart.write_amplification_factor : ${_WAF}"
 				echo "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
 				echo "smart.host_reads                 : ${_VUsmart_E3}%"
 				echo "smart.timed_work_load            : ${_VUsmart_E4} minutes (started on ${_timed_work_load_started})"
 				echo "Drive life                       : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
 				echo "Endurance                        : ${_DWPD} DWPD"
+				echo "Data written                     : ${_dataWrittenTB} TB (${_dataWritten} bytes)"
 			fi
 		fi
 		return 0
