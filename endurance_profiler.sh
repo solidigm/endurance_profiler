@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.2-rc"
+_version="v1.1.22"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -298,6 +298,13 @@ function start() {
 				else
 					_VUsmart_F5_before=0
 					echo ${_VUsmart_F5_before} > "${_VUsmart_F5_beforefile}"
+				fi
+
+				if [ -s "${_timed_work_load_startedfile}" ] ; then
+					_timed_work_load_started=$(cat "${_timed_work_load_startedfile}")
+				else
+					_timed_work_load_started="Not started"
+					echo "${_timed_work_load_started}" > "${_timed_work_load_startedfile}"
 				fi
 
 				(loop "${_nvme_namespace}" >> "${_logfile}" 2>>"${_logfile}") &
