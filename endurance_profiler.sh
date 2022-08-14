@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.22"
+_version="v1.1.23"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -418,6 +418,7 @@ function WAFinfo() {
 		echo "Serial number                    : ${_serial_number}"
 		echo "Firmware version                 : ${_firmware}"
 		echo "Device                           : /dev/${_nvme_namespace}"	
+		echo "Log file                         : ${_logfile} (size: $(ls -lh ${_logfile} | awk '{print $5}'))"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
 			echo "smart.media_wear_percentage      : Not Available yet"
 			echo "smart.host_reads                 : Not Available yet"
