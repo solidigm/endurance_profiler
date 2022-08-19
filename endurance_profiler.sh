@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.23"
+_version="v1.1.24"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -412,13 +412,14 @@ function WAFinfo() {
 		_VUsmart_E2=$(get_smart_log "${_nvme_namespace}" 0x41)
 		_VUsmart_E3=$(get_smart_log "${_nvme_namespace}" 0x4d)
 		_VUsmart_E4=$(get_smart_log "${_nvme_namespace}" 0x59)
-		_timed_work_load_started=$(cat "${_timed_work_load_startedfile}") 
+		_timed_work_load_started=$(cat "${_timed_work_load_startedfile}")
+		_logfile_size=$(find "${_logfile}" -printf "%s" )
 
 		echo "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
 		echo "Serial number                    : ${_serial_number}"
 		echo "Firmware version                 : ${_firmware}"
 		echo "Device                           : /dev/${_nvme_namespace}"	
-		echo "Log file                         : ${_logfile} (size: $(ls -lh ${_logfile} | awk '{print $5}'))"
+		echo "Log file                         : ${_logfile} (size: $((_logfile_size/1000)) KB)"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
 			echo "smart.media_wear_percentage      : Not Available yet"
 			echo "smart.host_reads                 : Not Available yet"
