@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.24"
+_version="v1.1.25"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -19,7 +19,7 @@ _WAFfile=/var/log/${_filename}/${_filename}.WAF.var
 _nvme_namespacefile=/var/log/${_filename}/${_filename}.nvmenamespace.var
 _VUsmart_F4_beforefile=/var/log/${_filename}/${_filename}.F4_before.var
 _VUsmart_F5_beforefile=/var/log/${_filename}/${_filename}.F5_before.var
-_timed_work_load_startedfile=/var/log/${_filename}/${_filename}.timed_work_load_started.var
+_timed_workload_startedfile=/var/log/${_filename}/${_filename}.timed_workload_started.var
 _db_not_supported="not logged"
 
 _TB_in_bytes=1000000000000
@@ -126,7 +126,7 @@ function loop() {
 	_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
 
 	echo "${_service} ${_version}"
-	echo "date, media_wear_percentage, host_reads, timed_work_load, NAND_bytes_written, host_bytes_written, WAF, temperature, percentage_used, drive_life_minutes, DWPD, dataWritten"
+	echo "date, media_wear_percentage, host_reads, timed_workload, NAND_bytes_written, host_bytes_written, WAF, temperature, percentage_used, drive_life_minutes, DWPD, dataWritten"
 
 	eval "$(awk '{printf "_readblocks_old=\"%s\" _writeblocks_old=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
 	while true; do
@@ -140,7 +140,7 @@ function loop() {
 			_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
 			send_to_db "smart.media_wear_percentage ${_media_wear_percentage} $(date +%s)"
 			send_to_db "smart.host_reads ${_VUsmart_E3} $(date +%s)"
-			send_to_db "smart.timed_work_load ${_VUsmart_E4} $(date +%s)"
+			send_to_db "smart.timed_workload ${_VUsmart_E4} $(date +%s)"
 			_VUsmart_F4_before=$(cat "${_VUsmart_F4_beforefile}")
 			_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
 			if [[ "${_VUsmart_F4_before}" -eq 0 ]]; then
@@ -300,11 +300,11 @@ function start() {
 					echo ${_VUsmart_F5_before} > "${_VUsmart_F5_beforefile}"
 				fi
 
-				if [ -s "${_timed_work_load_startedfile}" ] ; then
-					_timed_work_load_started=$(cat "${_timed_work_load_startedfile}")
+				if [ -s "${_timed_workload_startedfile}" ] ; then
+					_timed_workload_started=$(cat "${_timed_workload_startedfile}")
 				else
-					_timed_work_load_started="Not started"
-					echo "${_timed_work_load_started}" > "${_timed_work_load_startedfile}"
+					_timed_workload_started="Not started"
+					echo "${_timed_workload_started}" > "${_timed_workload_startedfile}"
 				fi
 
 				(loop "${_nvme_namespace}" >> "${_logfile}" 2>>"${_logfile}") &
@@ -371,7 +371,7 @@ function resetWorkloadTimer() {
 		echo 0 > "${_VUsmart_F4_beforefile}"
 		echo 0 > "${_VUsmart_F5_beforefile}"
 		echo 0 > "${_WAFfile}"
-		date > "${_timed_work_load_startedfile}"
+		date > "${_timed_workload_startedfile}"
 		return 0
 	else	
 		# background process not running
@@ -412,7 +412,7 @@ function WAFinfo() {
 		_VUsmart_E2=$(get_smart_log "${_nvme_namespace}" 0x41)
 		_VUsmart_E3=$(get_smart_log "${_nvme_namespace}" 0x4d)
 		_VUsmart_E4=$(get_smart_log "${_nvme_namespace}" 0x59)
-		_timed_work_load_started=$(cat "${_timed_work_load_startedfile}")
+		_timed_workload_started=$(cat "${_timed_workload_startedfile}")
 		_logfile_size=$(find "${_logfile}" -printf "%s" )
 
 		echo "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
@@ -423,13 +423,13 @@ function WAFinfo() {
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
 			echo "smart.media_wear_percentage      : Not Available yet"
 			echo "smart.host_reads                 : Not Available yet"
-			echo "smart.timed_work_load            : less than 60 minutes (started on ${_timed_work_load_started})"
+			echo "smart.timed_workload             : less than 60 minutes (started on ${_timed_workload_started})"
 		else
 			if [[ ${_VUsmart_E2} -eq 0 ]] ; then
 				echo "smart.write_amplification_factor : ${_WAF}"
 				echo "smart.media_wear_percentage      : <0.001%"
 				echo "smart.host_reads                 : ${_VUsmart_E3}%"
-				echo "smart.timed_work_load            : ${_VUsmart_E4} minutes (started on ${_timed_work_load_started})"
+				echo "smart.timed_workload            : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
 				echo "Drive life                       : smart.media_wear_percentage to small to calculate Drive life"
 			else
 				_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
@@ -444,7 +444,7 @@ function WAFinfo() {
 				echo "smart.write_amplification_factor : ${_WAF}"
 				echo "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
 				echo "smart.host_reads                 : ${_VUsmart_E3}%"
-				echo "smart.timed_work_load            : ${_VUsmart_E4} minutes (started on ${_timed_work_load_started})"
+				echo "smart.timed_workload            : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
 				echo "Drive life                       : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
 				echo "Endurance                        : ${_DWPD} DWPD"
 				echo "Data written                     : ${_dataWrittenTB} TB (${_dataWritten} bytes)"
@@ -521,7 +521,7 @@ touch "${_pidfile}" >/dev/null 2>&1 || log "Error creating ${_pidfile}"
 touch "${_nvme_namespacefile}" >/dev/null 2>&1 || log "Error creating ${_nvme_namespacefile}"
 touch "${_VUsmart_F4_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsmart_F4_beforefile}"
 touch "${_VUsmart_F5_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsmart_F5_beforefile}"
-touch "${_timed_work_load_startedfile}" >/dev/null 2>&1 || log "Error creating ${_timed_work_load_startedfile}"
+touch "${_timed_workload_startedfile}" >/dev/null 2>&1 || log "Error creating ${_timed_workload_startedfile}"
 
 case "$1" in
 	status|Status|STATUS)
