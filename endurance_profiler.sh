@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.28"
+_version="v1.1.29"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -24,7 +24,7 @@ _db_not_supported="not logged"
 
 _TB_in_bytes=1000000000000
 _host_written_unit=32000000
-_bandwith_blocksize=512
+_bandwidth_blocksize=512
 _minutes_in_day=1440
 _minutes_in_year=525600
 
@@ -179,8 +179,8 @@ function loop() {
 		fi
 		# this block will run every second
 		eval "$(awk '{printf "_readblocks_new=\"%s\" _writeblocks_new=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
-		_read_bandwidth=$(echo "(${_readblocks_new}-${_readblocks_old})*${_bandwith_blocksize}/1000/1000" | bc)
-		_write_bandwidth=$(echo "(${_writeblocks_new}-${_writeblocks_old})*${_bandwith_blocksize}/1000/1000" | bc)
+		_read_bandwidth=$(echo "(${_readblocks_new}-${_readblocks_old})*${_bandwidth_blocksize}/1000/1000" | bc)
+		_write_bandwidth=$(echo "(${_writeblocks_new}-${_writeblocks_old})*${_bandwidth_blocksize}/1000/1000" | bc)
 		_readblocks_old=${_readblocks_new}
 		_writeblocks_old=${_writeblocks_new}
 
