@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.27"
+_version="v1.1.28"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)

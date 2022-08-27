@@ -105,7 +105,9 @@ Check the status of the service:
 # ./endurance_profiler.sh status
 [STATUS] Service ./endurance_profiler.sh with pid=7936 running
 ```
-It is suggested to run a workload for long time, a day or longer. Media wear, host reads and timed workload are only updated after one hour.
+To get a good estimation for the information returned by the WAFinfo command it is suggested to run a workload for a significant amount of time.  
+Media wear, host reads and timed workload are only updated after one hour.  
+Write Amplification Factor, Drive life, Endurance and Data written are based on Media Wear since resetting the workload timer. It might require a workload to write multiple times the drive's capacity to get a high enough Media Wear percentage. 
 
 Check the Write Amplification Info:
 ```
