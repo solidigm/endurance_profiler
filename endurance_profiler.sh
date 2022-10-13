@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.29"
+_version="v1.1.30"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -101,8 +101,8 @@ function get_smart_log() {
 	local _offset=$2
 	local _rev_vusmart_hexadecimal
 
-	# get Vendor Unique smart attributes in binary format, get 6 bytes from possition _offset and remove position.
-	_vusmart_hexadecimal=$(nvme intel smart-log-add /dev/"${_local_nvme_namespace}" -b | xxd -l 6 -seek "${_offset}" | cut -c 11-19 | sed 's/ //g')
+	# get Vendor Unique smart attributes in binary format, get 6 bytes from possition _offset
+	_vusmart_hexadecimal=$(nvme intel smart-log-add /dev/"${_local_nvme_namespace}" -b | xxd -l 6 -seek "${_offset}" -ps)
 	# reverse the varialbe _vusmart_hexadecimal
 	len=${#_vusmart_hexadecimal}
 	for((i=len;i>=0;i=i-2)); do _rev_vusmart_hexadecimal="$_rev_vusmart_hexadecimal${_vusmart_hexadecimal:$i:2}"; done
