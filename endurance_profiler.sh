@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.31"
+_version="v1.1.32"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -93,7 +93,7 @@ function send_to_db() {
 	return 0
 }
 
-function get_smart_log() {
+function get_vusmart_log() {
 	# Function will return the smart log info for the nvme device at an offset
 	# argument 1: nvme device
 	# argument 2: offset 
@@ -133,11 +133,11 @@ function loop() {
 	while true; do
 		if ! ((_counter % 60)) ; then
 			# this block will run every minute
-			_VUsmart_E2=$(get_smart_log "${_nvme_namespace}" 0x41)
-			_VUsmart_E3=$(get_smart_log "${_nvme_namespace}" 0x4d)
-			_VUsmart_E4=$(get_smart_log "${_nvme_namespace}" 0x59)
-			_VUsmart_F4=$(get_smart_log "${_nvme_namespace}" 0x89)
-			_VUsmart_F5=$(get_smart_log "${_nvme_namespace}" 0x95)
+			_VUsmart_E2=$(get_vusmart_log "${_nvme_namespace}" 0x41)
+			_VUsmart_E3=$(get_vusmart_log "${_nvme_namespace}" 0x4d)
+			_VUsmart_E4=$(get_vusmart_log "${_nvme_namespace}" 0x59)
+			_VUsmart_F4=$(get_vusmart_log "${_nvme_namespace}" 0x89)
+			_VUsmart_F5=$(get_vusmart_log "${_nvme_namespace}" 0x95)
 			_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
 			send_to_db "smart.media_wear_percentage ${_media_wear_percentage} $(date +%s)"
 			send_to_db "smart.host_reads ${_VUsmart_E3} $(date +%s)"
@@ -410,9 +410,9 @@ function WAFinfo() {
 		_serial_number=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep sn | awk '{print $3}')
 		_firmware=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep "fr " | awk '{print $3}')
 		_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
-		_VUsmart_E2=$(get_smart_log "${_nvme_namespace}" 0x41)
-		_VUsmart_E3=$(get_smart_log "${_nvme_namespace}" 0x4d)
-		_VUsmart_E4=$(get_smart_log "${_nvme_namespace}" 0x59)
+		_VUsmart_E2=$(get_vusmart_log "${_nvme_namespace}" 0x41)
+		_VUsmart_E3=$(get_vusmart_log "${_nvme_namespace}" 0x4d)
+		_VUsmart_E4=$(get_vusmart_log "${_nvme_namespace}" 0x59)
 		_timed_workload_started=$(cat "${_timed_workload_startedfile}")
 		_logfile_size=$(find "${_logfile}" -printf "%s" )
 
@@ -437,7 +437,7 @@ function WAFinfo() {
 				_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
 				_drive_life_years=$(echo "scale=3;${_drive_life_minutes}/${_minutes_in_year}" | bc -l)
 				_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
-				_VUsmart_F5=$(get_smart_log "${_nvme_namespace}" 0x95)
+				_VUsmart_F5=$(get_vusmart_log "${_nvme_namespace}" 0x95)
 				_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*${_host_written_unit}*${_minutes_in_day}/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
 				_hostWrites="${_VUsmart_F5}-${_VUsmart_F5_before}"
 				_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
