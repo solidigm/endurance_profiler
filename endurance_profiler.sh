@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.32"
+_version="v1.1.33"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -29,11 +29,13 @@ _minutes_in_day=1440
 _minutes_in_year=525600
 
 function check_command() {
-	# Iterate over all function arguments and check if each argument is an installed command
+	# Function checks if the arguments are installed commands
+	# Function iterates over all function arguments and returns 1 if a command is not an installed command
 	while [ $# -gt 0 ] ; do
 		# check if a passed argument is an installed command
 		if ! command -v "$1" &> /dev/null ; then
 			log "[CHECKCOMMAND] Command $1 could not be found"
+			log "[CHECKCOMMAND] Command $1 is a required command. Try to install $1."
 			# exit the script with error code 1 
 			exit 1
 		fi
@@ -43,13 +45,14 @@ function check_command() {
 }
 
 function check_nvme_namespace() {
-	# Fuction returns true if argument is an existing nvme device namespace
+	# Function checks if the first argument is an existing nvme device namespace
+	# Function returns 0 if namespace exists
 	# argument 1: a namespace
 	local _nvme_namespace=$1
 	local _ret
 
 	if [[ ${_nvme_namespace} =~ ^nvme[0-9]+n[0-9]+$ ]] ; then
-		_ret=$(nvme list 2>/dev/null  | grep "${_nvme_namespace}" 2>&1 >/dev/null)
+		_ret=$(nvme list 2>/dev/null | grep "${_nvme_namespace}" 2>&1 >/dev/null)
 		# assign the return value of grep to the varialbe ret
 		_ret=$?
 		if [[ ${_ret} -eq 0 ]] ; then
@@ -71,7 +74,7 @@ function check_nvme_namespace() {
 }
 
 function send_to_db() {
-	# Function will send to content of the argument to a database as configured in the global variable _db
+	# Function will send the data in the first argument to a database as configured in the global variable _db
 	# Supported databases defined in _db
 	#	graphite
 	#	logfile
@@ -94,15 +97,15 @@ function send_to_db() {
 }
 
 function get_vusmart_log() {
-	# Function will return the smart log info for the nvme device at an offset
+	# Function will return the Intel/Solidigm Vendor Unique smart log info for the nvme device at an offset
 	# argument 1: nvme device
 	# argument 2: offset 
 	local _local_nvme_namespace=$1
 	local _offset=$2
 	local _rev_vusmart_hexadecimal
 
-	# get Vendor Unique smart attributes in binary format, get 6 bytes from possition _offset
-	_vusmart_hexadecimal=$(nvme get-log /dev/"${_local_nvme_namespace}" --log-id 0xca --log-len 512 --raw-binary  | xxd -l 6 -seek "${_offset}" -ps)
+	# get Vendor Unique smart attributes in binary format, get 6 bytes from position _offset
+	_vusmart_hexadecimal=$(nvme get-log /dev/"${_local_nvme_namespace}" --log-id 0xca --log-len 512 --raw-binary | xxd -l 6 -seek "${_offset}" -ps)
 	# reverse the varialbe _vusmart_hexadecimal
 	len=${#_vusmart_hexadecimal}
 	for((i=len;i>=0;i=i-2)); do _rev_vusmart_hexadecimal="$_rev_vusmart_hexadecimal${_vusmart_hexadecimal:$i:2}"; done
@@ -229,7 +232,7 @@ function retrieve_nvme_namespace() {
 		# the file ${_nvme_namespacefile} exists
 		_nvme_namespace=$(cat "${_nvme_namespacefile}")
 		if [[ ${_nvme_namespace} =~ ^nvme[0-9]+n[0-9]+$ ]] ; then
-			_ret=$(nvme list 2>/dev/null  | grep "${_nvme_namespace}" 2>&1 >/dev/null)
+			_ret=$(nvme list 2>/dev/null | grep "${_nvme_namespace}" 2>&1 >/dev/null)
 			# assign the return value of grep to the varialbe ret
 			_ret=$?
 			if [[ ${_ret} -eq 0 ]] ; then
@@ -486,16 +489,16 @@ function showVersion() {
 }
 
 function clean() {
-        if status >/dev/null 2>&1 ; then
-                # background process running
-                log "[CLEAN] Can't remove used files. ${_service} is running."
-                return 1
-        else
-                # background process not running
-                log "[CLEAN] Removing used files."
-                rm -rfv /var/log/"${_filename}"
+	if status >/dev/null 2>&1 ; then
+		# background process running
+		log "[CLEAN] Can't remove used files. ${_service} is running."
+		return 1
+	else
+		# background process not running
+		log "[CLEAN] Removing used files."
+		rm -rfv /var/log/"${_filename}"
 		return 0
-        fi
+	fi
 }
 
 function usage() {
