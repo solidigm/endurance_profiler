@@ -154,10 +154,10 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 ```
 **_db**  
-The variable indicates if and where the evaluated SMART attributes and bandwidth will be logged.  
+The variable indicates if and where the evaluated SMART attributes and bandwidth will be logged.
 Logging is not required to get the Write Amplification Factor through the WAFinfo option.
-- supported values: graphite, logfile, console
-- default: console  
+- supported values: graphite, logfile
+- default: logfile
 
 The following SMART attributes are evaluated and logged every minute in the log file:
 - media_wear_percentage
