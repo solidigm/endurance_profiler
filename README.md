@@ -1,6 +1,7 @@
 # endurance_profiler.sh
 Linux Bash script that reports the Write Amplification Factor (WAF) of a workload over a defined period and estimates the Drive Life of the media in years of a new drive under that workload.
 Media is one component of many affecting drive lifespan.
+The script does not read user data. It only reads SMART data from the device.
 ## Name
 endurance_profiler.sh - Extracting Write Amplification Factor (WAF) on Solidigm and Intel PCIe/NVMe NAND based SSDs.
 ## Synopsis
@@ -73,6 +74,8 @@ Drive life is timed_workload divided by media_wear_percentage. The more data wri
 The more data written since a reset of the workload timer the more accurate the endurance expectancy.
 - **Data written**: Terabytes written by the host to the drive since reset of the workload timer.
 
+## Dependencies
+The endurance_profiler.sh script uses the following tools: awk, basename, bc, grep, sed, nc, and nvme-cli
 ## Step by step guide 
 Calling the script without a parameter will result in printing the supported options.
 ```
