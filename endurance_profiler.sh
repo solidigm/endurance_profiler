@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.33"
+_version="v1.1.36"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -117,7 +117,7 @@ function get_vusmart_log() {
 
 function loop() {
 	local _counter=0
-	local _hostWrites=1
+	local _hostWrites=1	
 	local _nandWrites=0
 	local _read_bandwidth=0
 	local _write_bandwidth=0
@@ -147,16 +147,13 @@ function loop() {
 			send_to_db "smart.timed_workload ${_VUsmart_E4} $(date +%s)"
 			_VUsmart_F4_before=$(cat "${_VUsmart_F4_beforefile}")
 			_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
-			if [[ "${_VUsmart_F4_before}" -eq 0 ]]; then
-				_VUsmart_F4_before=${_VUsmart_F4}
-				echo "${_VUsmart_F4_before}" > "${_VUsmart_F4_beforefile}"
-				_VUsmart_F5_before=${_VUsmart_F5}
-				echo "${_VUsmart_F5_before}" > "${_VUsmart_F5_beforefile}"
-			fi
+
 			if [[ "${_VUsmart_F5}" -eq "${_VUsmart_F5_before}" ]] ; then
+				# No host data written since resetting the workload timer
 				_hostWrites=1
 				_nandWrites=0
 			else
+				# Calculate host bytes written and NAND bytes written since resetting the workload timer
 				_hostWrites=${_VUsmart_F5}-${_VUsmart_F5_before}
 				_nandWrites=${_VUsmart_F4}-${_VUsmart_F4_before}
 			fi
@@ -290,25 +287,11 @@ function start() {
 			else
 				log "[START] Logging namespace ${_nvme_namespace}. Log filename ${_logfile}"
 				log "[START} ${_nvme_namespacefile} exists and namespace=${_nvme_namespace}"
-				if [ -s "${_VUsmart_F4_beforefile}" ] ; then
-					_VUsmart_F4_before=$(cat "${_VUsmart_F4_beforefile}")
-				else
-					_VUsmart_F4_before=0
-					echo ${_VUsmart_F4_before} > "${_VUsmart_F4_beforefile}"
-				fi
 
-				if [ -s "${_VUsmart_F5_beforefile}" ] ; then
-					_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
-				else
-					_VUsmart_F5_before=0
-					echo ${_VUsmart_F5_before} > "${_VUsmart_F5_beforefile}"
-				fi
-
-				if [ -s "${_timed_workload_startedfile}" ] ; then
-					_timed_workload_started=$(cat "${_timed_workload_startedfile}")
-				else
-					_timed_workload_started="Not started"
-					echo "${_timed_workload_started}" > "${_timed_workload_startedfile}"
+				if ! [ -s "${_timed_workload_startedfile}" ] ; then
+					# ${_timed_workload_startedfile} is an empty file
+					# reset all global variables
+					resetWorkloadTimer
 				fi
 
 				(loop "${_nvme_namespace}" >> "${_logfile}" 2>>"${_logfile}") &
@@ -360,28 +343,27 @@ function restart() {
 function resetWorkloadTimer() {
 	local _nvme_device
 	local _nvme_namespace
+	local _VUsmart_F4_before
+	local _VUsmart_F5_before
 	
-	if status >/dev/null 2>&1 ; then
-		# background process running
-		_nvme_namespace=$(retrieve_nvme_namespace)
-		if [ "${_nvme_namespace}" == "" ] ; then
-			log "[RESETWORKLOADTIMER] Invalid nvme namespace parameter. Workload Timer not reset."
-			return 1
-		fi
-		_nvme_device=${_nvme_namespace/%n[0-9]*/} 
-		nvme set-feature -f 0xd5 -v 1 /dev/"${_nvme_device}" > /dev/null 2>&1
-		log "[RESETWORKLOADTIMER] Workload Timer Reset on ${_nvme_device} at $(date)"
-
-		echo 0 > "${_VUsmart_F4_beforefile}"
-		echo 0 > "${_VUsmart_F5_beforefile}"
-		echo 0 > "${_WAFfile}"
-		date > "${_timed_workload_startedfile}"
-		return 0
-	else	
-		# background process not running
-		log "[RESETWORKLOADTIMER] ${_service} is not running. Workload Timer not reset."
+	# background process running
+	_nvme_namespace=$(retrieve_nvme_namespace)
+	if [ "${_nvme_namespace}" == "" ] ; then
+		log "[RESETWORKLOADTIMER] Invalid nvme namespace parameter. Workload Timer not reset."
 		return 1
 	fi
+	_nvme_device=${_nvme_namespace/%n[0-9]*/} 
+	nvme set-feature -f 0xd5 -v 1 /dev/"${_nvme_device}" > /dev/null 2>&1
+	log "[RESETWORKLOADTIMER] Workload Timer Reset on ${_nvme_device} at $(date)"
+
+	_VUsmart_F4_before=$(get_vusmart_log "${_nvme_namespace}" 0x89)
+	_VUsmart_F5_before=$(get_vusmart_log "${_nvme_namespace}" 0x95)		
+		
+	echo "${_VUsmart_F4_before}" > "${_VUsmart_F4_beforefile}"
+	echo "${_VUsmart_F5_before}" > "${_VUsmart_F5_beforefile}"
+	echo 0 > "${_WAFfile}"
+	date > "${_timed_workload_startedfile}"
+	return 0
 }
 
 function WAFinfo() {
