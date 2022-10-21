@@ -152,15 +152,15 @@ removed directory '/var/log/endurance_profiler'
 ## Configurable variables
 The following variables in the **./endurance_profiler.sh** script are configurable.
 ``` 
-_db=console
+_db=none
 _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 ```
 **_db**  
 The variable indicates if and where the evaluated SMART attributes and bandwidth will be logged.
 Logging is not required to get the Write Amplification Factor through the WAFinfo option.
-- supported values: graphite, logfile
-- default: logfile
+- supported values: graphite, logfile, graphite+logfile, none
+- default: none
 
 The following SMART attributes are evaluated and logged every minute in the log file:
 - media_wear_percentage

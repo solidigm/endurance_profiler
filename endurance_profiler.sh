@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # User configurable variables
-_db=console
+_db=none
 _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.38"
+_version="v1.1.39"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -78,6 +78,8 @@ function send_to_db() {
 	# Supported databases defined in _db
 	#	graphite
 	#	logfile
+	#	graphite+log
+	#	none
 	# argument 1: data to be sent
 	local _data=$1
 
@@ -87,10 +89,18 @@ function send_to_db() {
 	elif [ "${_db}" = "logfile" ] ; then
 		# send the data the log file
 		echo "${_data}"
+	elif [ "${_db}" = "graphite+logfile" ] ; then
+		# send the data to the graphite port and destination, and to the logfile
+		echo "${_data}" | nc -N ${_nc_graphite_destination} ${_nc_graphite_port}
+		echo "${_data}"
+	elif [ "${_db}" = "none" ] ; then
+		# don't do anything with the data
+		:
 	elif [ "${_db_not_supported}" != "logged" ] ; then
 		# variable _db does not contain a supported database
 		# send once the error to the log file
 		_db_not_supported="logged"
+		_db="none"
 		log "[SENDTODB] ${_db} as database is not supported"
 	fi
 	return 0
@@ -178,15 +188,17 @@ function loop() {
 			_counter=0
 		fi
 		# this block will run every second
-		eval "$(awk '{printf "_readblocks_new=\"%s\" _writeblocks_new=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
-		_read_bandwidth=$(echo "(${_readblocks_new}-${_readblocks_old})*${_bandwidth_blocksize}/1000/1000" | bc)
-		_write_bandwidth=$(echo "(${_writeblocks_new}-${_writeblocks_old})*${_bandwidth_blocksize}/1000/1000" | bc)
-		_readblocks_old=${_readblocks_new}
-		_writeblocks_old=${_writeblocks_new}
+		if ! [ "${_db}" = "none" ] ; then
+			eval "$(awk '{printf "_readblocks_new=\"%s\" _writeblocks_new=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
+			_read_bandwidth=$(echo "(${_readblocks_new}-${_readblocks_old})*${_bandwidth_blocksize}/1000/1000" | bc)
+			_write_bandwidth=$(echo "(${_writeblocks_new}-${_writeblocks_old})*${_bandwidth_blocksize}/1000/1000" | bc)
+			_readblocks_old=${_readblocks_new}
+			_writeblocks_old=${_writeblocks_new}
 
-		# add read and write bandwidth to TimeSeriesDataBase
-		send_to_db "nvme.readBW ${_read_bandwidth} $(date +%s)"
-		send_to_db "nvme.writeBW ${_write_bandwidth} $(date +%s)"
+			# add read and write bandwidth to TimeSeriesDataBase
+			send_to_db "nvme.readBW ${_read_bandwidth} $(date +%s)"
+			send_to_db "nvme.writeBW ${_write_bandwidth} $(date +%s)"
+		fi
 
 		_counter=$(( _counter + 1 ))
 		sleep 1
@@ -287,6 +299,7 @@ function start() {
 			else
 				log "[START] Logging namespace ${_nvme_namespace}. Log filename ${_logfile}"
 				log "[START} ${_nvme_namespacefile} exists and namespace=${_nvme_namespace}"
+				log "[START} Sending endurance data to database=${_db}"
 
 				if ! [ -s "${_timed_workload_startedfile}" ] ; then
 					# ${_timed_workload_startedfile} is an empty file
