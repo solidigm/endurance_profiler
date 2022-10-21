@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.37"
+_version="v1.1.38"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -456,6 +456,7 @@ function setDevice() {
 		if check_nvme_namespace "${_nvme_namespace}" ; then 
 			echo "${_nvme_namespace}" > "${_nvme_namespacefile}"
 			log "[SETDEVICE] Device set to ${_nvme_namespace}"
+			resetWorkloadTimer
 		else
 			echo "" > "${_nvme_namespacefile}"
 			log "[SETDEVICE] Could not set device. nvme_namespace ${_nvme_namespace} does not exist."
