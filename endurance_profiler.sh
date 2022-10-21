@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.39"
+_version="v1.1.40"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -135,6 +135,14 @@ function loop() {
 	local _writeblocks_old=0
 	local _readblocks_new=0
 	local _writeblocks_new=0
+	local _host_reads=0
+	local _media_wear_percentage=0
+	local _timed_workload=0
+	local _DWPD=0
+	local _WAF=0
+	local _host_bytes_written=0
+	local _temperature=0
+	local _percentage_used=0
 	local _nvme_namespace=$1
 
 	_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
@@ -151,39 +159,55 @@ function loop() {
 			_VUsmart_E4=$(get_vusmart_log "${_nvme_namespace}" 0x59)
 			_VUsmart_F4=$(get_vusmart_log "${_nvme_namespace}" 0x89)
 			_VUsmart_F5=$(get_vusmart_log "${_nvme_namespace}" 0x95)
-			_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
-			send_to_db "smart.media_wear_percentage ${_media_wear_percentage} $(date +%s)"
-			send_to_db "smart.host_reads ${_VUsmart_E3} $(date +%s)"
-			send_to_db "smart.timed_workload ${_VUsmart_E4} $(date +%s)"
+			_temperature=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep temperature | awk '{print $3}' | sed 's/[^0-9]*//g')
+			_percentage_used=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep percentage_used | awk '{print $3}' | sed 's/[^0-9]*//g')
+
 			_VUsmart_F4_before=$(cat "${_VUsmart_F4_beforefile}")
 			_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
-
 			if [[ "${_VUsmart_F5}" -eq "${_VUsmart_F5_before}" ]] ; then
 				# No host data written since resetting the workload timer
-				_hostWrites=1
+				_hostWrites=0
 				_nandWrites=0
+				_WAF=0
 			else
 				# Calculate host bytes written and NAND bytes written since resetting the workload timer
 				_hostWrites=${_VUsmart_F5}-${_VUsmart_F5_before}
 				_nandWrites=${_VUsmart_F4}-${_VUsmart_F4_before}
+				_WAF=$(echo "scale=2;(${_nandWrites})/(${_hostWrites})" | bc -l)
 			fi
-			_WAF=$(echo "scale=2;(${_nandWrites})/(${_hostWrites})" | bc -l)
-			send_to_db "smart.write_amplicifation_factor ${_WAF} $(date +%s)"
-			echo "${_WAF}" > "${_WAFfile}"
-			# log host write bytes
-			send_to_db "smart.host_bytes_written $(echo "${_VUsmart_F5}*32" | bc -l) $(date +%s)"
-			# log smart attributes
-			_temperature=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep temperature | awk '{print $3}' | sed 's/[^0-9]*//g')
-			send_to_db "smart.temperature ${_temperature} $(date +%s)"
-			_percentage_used=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep percentage_used | awk '{print $3}' | sed 's/[^0-9]*//g')
-			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"
-			_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
-			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
-			_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*${_host_written_unit}*${_minutes_in_day}/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
-			send_to_db "smart.DWPD ${_DWPD} $(date +%s)"
+			_host_bytes_written=$(echo "scale=0;${_VUsmart_F5}*${_host_written_unit}" | bc -l)
 			_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
-			send_to_db "smart.dataWritten ${_dataWritten} $(date +%s)"
 
+			if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
+				# ${_timed_workload_started} is less than 60 minutes, no real data for Vendor Unique smart attribute E2, E3 and E4
+				_media_wear_percentage=0
+				_host_reads=0
+				_timed_workload=0
+				_drive_life_minutes=0
+				_DWPD=0
+			else
+				_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
+				_host_reads=${_VUsmart_E3}
+				_timed_workload=${_VUsmart_E4}
+				if [[ ${_VUsmart_E2} -eq 0 ]] ; then
+					_drive_life_minutes=0
+				else
+					_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
+				fi
+				_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*${_host_written_unit}*${_minutes_in_day}/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
+			fi
+
+			send_to_db "smart.media_wear_percentage ${_media_wear_percentage} $(date +%s)"			
+			send_to_db "smart.host_reads ${_host_reads} $(date +%s)"
+			send_to_db "smart.timed_workload ${_timed_workload} $(date +%s)"
+			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
+			send_to_db "smart.host_bytes_written ${_host_bytes_written} $(date +%s)"
+			send_to_db "smart.dataWritten ${_dataWritten} $(date +%s)"
+			send_to_db "smart.DWPD ${_DWPD} $(date +%s)"
+			send_to_db "smart.temperature ${_temperature} $(date +%s)"
+			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"	
+			send_to_db "smart.write_amplicifation_factor ${_WAF} $(date +%s)"
+			echo "${_WAF}" > "${_WAFfile}"		
 			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}, ${_DWPD}, ${_dataWritten}"
 			_counter=0
 		fi
