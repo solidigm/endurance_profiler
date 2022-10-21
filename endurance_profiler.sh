@@ -8,7 +8,7 @@ _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 
 # Script variables, do not modify
-_version="v1.1.36"
+_version="v1.1.37"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -53,7 +53,7 @@ function check_nvme_namespace() {
 
 	if [[ ${_nvme_namespace} =~ ^nvme[0-9]+n[0-9]+$ ]] ; then
 		_ret=$(nvme list 2>/dev/null | grep "${_nvme_namespace}" 2>&1 >/dev/null)
-		# assign the return value of grep to the varialbe ret
+		# assign the return value of grep to the variable ret
 		_ret=$?
 		if [[ ${_ret} -eq 0 ]] ; then
 			# grep returned 0 as it found ${_nvme_namespace}
@@ -89,7 +89,7 @@ function send_to_db() {
 		echo "${_data}"
 	elif [ "${_db_not_supported}" != "logged" ] ; then
 		# variable _db does not contain a supported database
-		# send once the the error to the log file
+		# send once the error to the log file
 		_db_not_supported="logged"
 		log "[SENDTODB] ${_db} as database is not supported"
 	fi
@@ -106,7 +106,7 @@ function get_vusmart_log() {
 
 	# get Vendor Unique smart attributes in binary format, get 6 bytes from position _offset
 	_vusmart_hexadecimal=$(nvme get-log /dev/"${_local_nvme_namespace}" --log-id 0xca --log-len 512 --raw-binary | xxd -l 6 -seek "${_offset}" -ps)
-	# reverse the varialbe _vusmart_hexadecimal
+	# reverse the variable _vusmart_hexadecimal
 	len=${#_vusmart_hexadecimal}
 	for((i=len;i>=0;i=i-2)); do _rev_vusmart_hexadecimal="$_rev_vusmart_hexadecimal${_vusmart_hexadecimal:$i:2}"; done
 	# convert _vusmart_hexadecimal to capital letter, convert to decimal and remove leading zeros
@@ -211,7 +211,7 @@ function retrieve_pid() {
 			# ${_pid} is running process
 			echo "${_pid}"
 		else
-			# ${_pid} is not a process id or not a ruunning process
+			# ${_pid} is not a process id or not a running process
 			echo 0
 		fi
 	else
@@ -222,15 +222,15 @@ function retrieve_pid() {
 }
 
 function retrieve_nvme_namespace() {
-	# echo the namespace reriteved from the file ${_nvme_namespacefile}
+	# echo the namespace retrieved from the file ${_nvme_namespacefile}
 	# only returns the namespace when it exists in the system 
-	# if an error found retrun an empty string
+	# if an error found return an empty string
 	if [ -s "${_nvme_namespacefile}" ] ; then
 		# the file ${_nvme_namespacefile} exists
 		_nvme_namespace=$(cat "${_nvme_namespacefile}")
 		if [[ ${_nvme_namespace} =~ ^nvme[0-9]+n[0-9]+$ ]] ; then
 			_ret=$(nvme list 2>/dev/null | grep "${_nvme_namespace}" 2>&1 >/dev/null)
-			# assign the return value of grep to the varialbe ret
+			# assign the return value of grep to the variable ret
 			_ret=$?
 			if [[ ${_ret} -eq 0 ]] ; then
 			# grep returned 0 as it found ${_nvme_namespace}
@@ -298,7 +298,7 @@ function start() {
 				# write process id to file
 				echo $! > "${_pidfile}"
 
-				# check if backgournd process is running
+				# check if background process is running
 				if ! status ; then 
 					log "[START] ${_service} failed to start"
 					rm "${_pidfile}"
