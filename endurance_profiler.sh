@@ -6,14 +6,16 @@
 _db=none
 _nc_graphite_destination=localhost
 _nc_graphite_port=2003
+_console_logging=false
 
 # Script variables, do not modify
-_version="v1.1.40"
+_version="v1.1.41"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
 
-_logfile=/var/log/${_filename}/${_filename}.log
+_datalogfile=/var/log/${_filename}/${_filename}.data.log
+_consolelogfile=/var/log/${_filename}/${_filename}.console.log
 _pidfile=/tmp/${_filename}.pid
 _WAFfile=/var/log/${_filename}/${_filename}.WAF.var
 _nvme_namespacefile=/var/log/${_filename}/${_filename}.nvmenamespace.var
@@ -90,7 +92,7 @@ function send_to_db() {
 		# send the data the log file
 		echo "${_data}"
 	elif [ "${_db}" = "graphite+logfile" ] ; then
-		# send the data to the graphite port and destination, and to the logfile
+		# send the data to the graphite port and destination, and to the datalogfile
 		echo "${_data}" | nc -N ${_nc_graphite_destination} ${_nc_graphite_port}
 		echo "${_data}"
 	elif [ "${_db}" = "none" ] ; then
@@ -232,6 +234,9 @@ function loop() {
 
 function log() {
 	echo "$*"
+	if [[ "${_console_logging}" = true ]] ; then
+		echo "$(date "+%F-%H:%M:%S") $*" >> "${_consolelogfile}"
+	fi
 	return 0
 }
 
@@ -321,9 +326,9 @@ function start() {
 				log "[START] Invalid nvme namespace parameter."
 				return 1
 			else
-				log "[START] Logging namespace ${_nvme_namespace}. Log filename ${_logfile}"
-				log "[START} ${_nvme_namespacefile} exists and namespace=${_nvme_namespace}"
-				log "[START} Sending endurance data to database=${_db}"
+				log "[START] Logging namespace ${_nvme_namespace}. Data log filename ${_datalogfile}"
+				log "[START] ${_nvme_namespacefile} exists and namespace=${_nvme_namespace}"
+				log "[START] Sending endurance data to database=${_db}"
 
 				if ! [ -s "${_timed_workload_startedfile}" ] ; then
 					# ${_timed_workload_startedfile} is an empty file
@@ -331,7 +336,7 @@ function start() {
 					resetWorkloadTimer
 				fi
 
-				(loop "${_nvme_namespace}" >> "${_logfile}" 2>>"${_logfile}") &
+				(loop "${_nvme_namespace}" >> "${_datalogfile}" 2>>"${_datalogfile}") &
 				# write process id to file
 				echo $! > "${_pidfile}"
 
@@ -436,13 +441,13 @@ function WAFinfo() {
 		_VUsmart_E3=$(get_vusmart_log "${_nvme_namespace}" 0x4d)
 		_VUsmart_E4=$(get_vusmart_log "${_nvme_namespace}" 0x59)
 		_timed_workload_started=$(cat "${_timed_workload_startedfile}")
-		_logfile_size=$(find "${_logfile}" -printf "%s" )
+		_datalogfile_size=$(find "${_datalogfile}" -printf "%s" )
 
 		echo "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
 		echo "Serial number                    : ${_serial_number}"
 		echo "Firmware version                 : ${_firmware}"
 		echo "Device                           : /dev/${_nvme_namespace}"	
-		echo "Log file                         : ${_logfile} (size: $((_logfile_size/1000)) KB)"
+		echo "Data log file                         : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
 			echo "smart.media_wear_percentage      : Not Available yet"
 			echo "smart.host_reads                 : Not Available yet"
@@ -540,7 +545,8 @@ check_command awk basename bc grep sed nc nvme
 mkdir -p /var/log/"${_filename}"
 
 # Create required files if they do not exist
-touch "${_logfile}" >/dev/null 2>&1 || log "Error creating ${_logfile}"
+touch "${_datalogfile}" >/dev/null 2>&1 || log "Error creating ${_datalogfile}"
+touch "${_consolelogfile}" >/dev/null 2>&1 || log "Error creating ${_consolelogfile}"
 touch "${_pidfile}" >/dev/null 2>&1 || log "Error creating ${_pidfile}"
 touch "${_nvme_namespacefile}" >/dev/null 2>&1 || log "Error creating ${_nvme_namespacefile}"
 touch "${_VUsmart_F4_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsmart_F4_beforefile}"

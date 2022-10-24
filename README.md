@@ -42,7 +42,7 @@ Shows the version of the tool.
 
 **clean**
 
-Removes all the files that were created when running the tool. Including the log file. 
+Removes all files that were created when running the tool. Including the log files. 
 
 **setDevice nvmeXnX**
 
@@ -54,16 +54,17 @@ The option is required before the service can be started.
 - CentOS 7, CentOS 8
 ## Performance impact
 The performance impact of the tool is minimal. 
-## Log file size
-The log file endurance_profiler.log is located in /var/log/endurance_profiler.
+## Data log file size
+The data log file endurance_profiler.data.log is located in /var/log/endurance_profiler.
 Every minute one line is added to the file. 
-File grows about 125KB per day.
+File grows about 125KB per day.  
+It is recomended to use a tool such as logrotate to allow automatic rotation, compression, removal, and mailing of log files. 
 ## WAF info output
 - **Drive**: the drive's market name.
 - **Serial number**: the drive's serial number. 
 - **Firmware version**: the drive's firmware version.
 - **Device**: the drive's device name.
-- **Log file**: the endurance_profiler script log file.
+- **Data Log file**: the endurance_profiler script data log file.
 - **write_amplification_factor**: the ratio of the amount of data actually written from the controller to the NAND to the amount of data sent from Operating System to the SSD since reset of the workload timer. The more data written since a reset of the workload timer the more accurate the Write Amplification Factor (WAF) result is.
 - **media_wear_percentage** : wear seen by the SSD since reset of the workload timer as a percentage of the max rated NAND cycles.
 - **host_reads** : the percentage of I/O operations that are read operations since reset of the workload timer.
@@ -96,12 +97,11 @@ Set the NVMe device to be monitored:
 Start the service:
 ```
 # ./endurance_profiler.sh start
-[START] Starting ./endurance_profiler.sh
-[START} /var/log/endurance_profiler/endurance_profiler.nvmenamespace.var exists and device=nvme1n1
-[CHECKNVMENAMESPACE] nvme device nvme1n1 exists
-[START] Logging on nvme1n1. Log filename /var/log/endurance_profiler/endurance_profiler.log
-[START] ./endurance_profiler.sh has pid=7936
-[STATUS] Service ./endurance_profiler.sh with pid=7936 running
+[START] Logging namespace nvme1n1. Data log filename /var/log/endurance_profiler/endurance_profiler.data.log
+[START] /var/log/endurance_profiler/endurance_profiler.nvmenamespace.var exists and namespace=nvme1n1
+[START] Sending endurance data to database=none
+[STATUS] Service ./endurance_profiler.sh with pid=33303 running
+
 ```
 Check the status of the service:
 ```
@@ -142,11 +142,13 @@ Remove all used files:
 ```
 # ./endurance_profiler.sh clean
 [CLEAN] Removing used files.
+removed '/var/log/endurance_profiler/endurance_profiler.timed_workload_started.var'
+removed '/var/log/endurance_profiler/endurance_profiler.data.log'
+removed '/var/log/endurance_profiler/endurance_profiler.nvmenamespace.var'
+removed '/var/log/endurance_profiler/endurance_profiler.console.log'
+removed '/var/log/endurance_profiler/endurance_profiler.WAF.var'
 removed '/var/log/endurance_profiler/endurance_profiler.F4_before.var'
 removed '/var/log/endurance_profiler/endurance_profiler.F5_before.var'
-removed '/var/log/endurance_profiler/endurance_profiler.log'
-removed '/var/log/endurance_profiler/endurance_profiler.nvmenamespace.var'
-removed '/var/log/endurance_profiler/endurance_profiler.timed_workload_started.var'
 removed directory '/var/log/endurance_profiler'
 ```
 ## Configurable variables
@@ -201,4 +203,3 @@ This variable will be used as destination port when _db=graphite.
 The destination port can be any IP port.
 - supported values: all IP ports
 - default: 2003
-
