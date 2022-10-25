@@ -9,7 +9,7 @@ _nc_graphite_port=2003
 _console_logging=false
 
 # Script variables, do not modify
-_version="v1.1.41"
+_version="v1.1.42"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -296,7 +296,7 @@ function retrieve_nvme_namespace() {
 
 function status() {
 	local _pid
-	
+
 	_pid=$(retrieve_pid)
 
 	if [[ "${_pid}" -gt 0 ]] ; then
@@ -313,7 +313,7 @@ function status() {
 function start() {
 	local _pid
 	local _nvme_namespace
-	
+
 	if status >/dev/null 2>&1 ; then
 		# background process running
 		_pid=$(retrieve_pid)
@@ -359,7 +359,7 @@ function start() {
 
 function stop() {
 	local _pid
-	
+
 	_pid=$(retrieve_pid)
 
 	if [[ "${_pid}" -gt 0 ]] ; then
@@ -387,7 +387,7 @@ function resetWorkloadTimer() {
 	local _nvme_namespace
 	local _VUsmart_F4_before
 	local _VUsmart_F5_before
-	
+
 	# background process running
 	_nvme_namespace=$(retrieve_nvme_namespace)
 	if [ "${_nvme_namespace}" == "" ] ; then
@@ -400,7 +400,7 @@ function resetWorkloadTimer() {
 
 	_VUsmart_F4_before=$(get_vusmart_log "${_nvme_namespace}" 0x89)
 	_VUsmart_F5_before=$(get_vusmart_log "${_nvme_namespace}" 0x95)		
-		
+
 	echo "${_VUsmart_F4_before}" > "${_VUsmart_F4_beforefile}"
 	echo "${_VUsmart_F5_before}" > "${_VUsmart_F5_beforefile}"
 	echo 0 > "${_WAFfile}"
@@ -528,7 +528,7 @@ function clean() {
 
 function usage() {
 	local _options="[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|version|clean]"
-	
+
 	echo "Usage: $(basename "$1") ${_options}"
 	return 0
 }

@@ -1,67 +1,82 @@
 # endurance_profiler.sh
+
 Linux Bash script that reports the Write Amplification Factor (WAF) of a workload over a defined period and estimates the Drive Life of the media in years of a new drive under that workload.
 Media is one component of many affecting drive lifespan.
 The script does not read user data. It only reads SMART data from the device.
+
 ## Name
+
 endurance_profiler.sh - Extracting Write Amplification Factor (WAF) on Solidigm and Intel PCIe/NVMe NAND based SSDs.
+
 ## Synopsis
+
 endurance_profiler.sh [options]
+
 ## Options
-**start**
+
+### start
 
 Starts the *endurance_profiler* service. It will log all the required Vendor Unique Smart Attributes to calculate the Write Amplification Factor and other endurance related information.
 
-When *endurance_profiler.sh start* is called it will complete immediately and a background process will keep running until *endurance_profiler.sh stop* is called. 
+When *endurance_profiler.sh start* is called it will complete immediately and a background process will keep running until *endurance_profiler.sh stop* is called.
 The status of the service can be checked with the option *status*.
 Start will fail if no device is set with setDevice option.
 
-**stop**
+### stop
 
 Stops the *endurance_profiler* service and stops logging the Vendor Unique Smart Attributes.
 
-**restart**
+### restart
 
 Stops and restarts the *endurance_profiler* service.
 
-**status**
+### status
 
 Returns the status of the service.
 The status can be *running* or *not running*.
 
-**resetWorkloadTimer**
+### resetWorkloadTimer
 
-Resets the workload timer. 
+Resets the workload timer.
 
-**WAFinfo**
+### WAFinfo
 
 Prints the Write Amplification Factor (WAF) and other information for the SSD.
 
-**version**
+### version
 
 Shows the version of the tool.
 
-**clean**
+### clean
 
-Removes all files that were created when running the tool. Including the log files. 
+Removes all files that were created when running the tool. Including the log files.
 
-**setDevice nvmeXnX**
+### setDevice nvmeXnX
 
 Sets the device to be monitored.
-This option has one mandatory parameter: the nvme device e.g. nvme1n1   
+This option has one mandatory parameter: the nvme device e.g. nvme1n1
 The option is required before the service can be started.
+
 ## Tested Operating Systems
+
 - Ubuntu 18.04, 20.04, 22.04  
 - CentOS 7, CentOS 8
+
 ## Performance impact
-The performance impact of the tool is minimal. 
+
+The performance impact of the tool is minimal.
+
 ## Data log file size
+
 The data log file endurance_profiler.data.log is located in /var/log/endurance_profiler.
-Every minute one line is added to the file. 
+Every minute one line is added to the file.
 File grows about 125KB per day.  
-It is recomended to use a tool such as logrotate to allow automatic rotation, compression, removal, and mailing of log files. 
+It is recomended to use a tool such as logrotate to allow automatic rotation, compression, removal, and mailing of log files.
+
 ## WAF info output
+
 - **Drive**: the drive's market name.
-- **Serial number**: the drive's serial number. 
+- **Serial number**: the drive's serial number.
 - **Firmware version**: the drive's firmware version.
 - **Device**: the drive's device name.
 - **Data Log file**: the endurance_profiler script data log file.
@@ -76,44 +91,57 @@ The more data written since a reset of the workload timer the more accurate the 
 - **Data written**: Terabytes written by the host to the drive since reset of the workload timer.
 
 ## Dependencies
+
 The endurance_profiler.sh script uses the following tools: awk, basename, bc, grep, sed, nc, and nvme-cli
-## Step by step guide 
+
+## Step by step guide
+
 Calling the script without a parameter will result in printing the supported options.
-```
+
+```text
 # ./endurance_profiler.sh
 [start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|version|clean]
 ```
+
 Check the status of the service:
-```
+
+```text
 # ./endurance_profiler.sh status
 [STATUS] Service ./endurance_profiler.sh not running
 ```
+
 Set the NVMe device to be monitored:
-```
+
+```text
 # ./endurance_profiler.sh setDevice nvme1n1
 [CHECKNVMENAMESPACE] nvme device nvme1n1 exists
 [SETDEVICE] Device set to nvme1n1
 ```
+
 Start the service:
-```
+
+```text
 # ./endurance_profiler.sh start
 [START] Logging namespace nvme1n1. Data log filename /var/log/endurance_profiler/endurance_profiler.data.log
 [START] /var/log/endurance_profiler/endurance_profiler.nvmenamespace.var exists and namespace=nvme1n1
 [START] Sending endurance data to database=none
 [STATUS] Service ./endurance_profiler.sh with pid=33303 running
+```
 
-```
 Check the status of the service:
-```
+
+```text
 # ./endurance_profiler.sh status
 [STATUS] Service ./endurance_profiler.sh with pid=7936 running
 ```
+
 To get a good estimation for the information returned by the WAFinfo command it is suggested to run a workload for a significant amount of time.  
 Media wear, host reads and timed workload are only updated after one hour.  
-Write Amplification Factor, Drive life, Endurance and Data written are based on Media Wear since resetting the workload timer. It might require a workload to write multiple times the drive's capacity to get a high enough Media Wear percentage. 
+Write Amplification Factor, Drive life, Endurance and Data written are based on Media Wear since resetting the workload timer. It might require a workload to write multiple times the drive's capacity to get a high enough Media Wear percentage.
 
 Check the Write Amplification Info:
-```
+
+```text
 # ./endurance_profiler.sh WAFinfo
 Drive                            : Intel(R) SSD DC P5520   Series 3840GB
 Serial number                    : PHAX217400CZ3P8CGN
@@ -127,19 +155,25 @@ Drive life                       : 5.747 years (3020800 minutes)
 Endurance                        : 1.87 DWPD
 Data written                     : 4.161 TB (4161568000000 bytes)
 ```
+
 Stop the service:
-```
+
+```text
 # ./endurance_profiler.sh stop
 [STOP] Stopping ./endurance_profiler.sh with pid=7936
 [STOP] kill 7936
 ```
+
 Check the status:
-```
+
+```text
 # ./endurance_profiler.sh status
 [STATUS] Service ./endurance_profiler.sh not running
 ```
+
 Remove all used files:
-```
+
+```text
 # ./endurance_profiler.sh clean
 [CLEAN] Removing used files.
 removed '/var/log/endurance_profiler/endurance_profiler.timed_workload_started.var'
@@ -151,20 +185,26 @@ removed '/var/log/endurance_profiler/endurance_profiler.F4_before.var'
 removed '/var/log/endurance_profiler/endurance_profiler.F5_before.var'
 removed directory '/var/log/endurance_profiler'
 ```
+
 ## Configurable variables
+
 The following variables in the **./endurance_profiler.sh** script are configurable.
-``` 
+
+``` text
 _db=none
 _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 ```
+
 **_db**  
 The variable indicates if and where the evaluated SMART attributes and bandwidth will be logged.
 Logging is not required to get the Write Amplification Factor through the WAFinfo option.
+
 - supported values: graphite, logfile, graphite+logfile, none
 - default: none
 
 The following SMART attributes are evaluated and logged every minute in the log file:
+
 - media_wear_percentage
   - measures the wear seen by the SSD since reset of the workload timer as a percentage of the max rated cycles.
 - host_reads
@@ -188,18 +228,21 @@ The following SMART attributes are evaluated and logged every minute in the log 
 - data_written
   - bytes written by the host to the drive since reset of the workload timer.
 
-The following bandwidth metrics are evaluated every second: 
-- readBW 
+The following bandwidth metrics are evaluated every second:
+
+- readBW
 - writeBW
 
 **_nc_graphite_destination**  
 This variable will be used as destination address when _db=graphite.
 The destination address can be localhost or a remote IP address.
+
 - supported values: all IP addresses
-- default: localhost 
+- default: localhost
 
 **_nc_graphite_port**  
 This variable will be used as destination port when _db=graphite.
 The destination port can be any IP port.
+
 - supported values: all IP ports
 - default: 2003
