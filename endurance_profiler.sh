@@ -9,7 +9,7 @@ _nc_graphite_port=2003
 _console_logging=false
 
 # Script variables, do not modify
-_version="v1.1.42"
+_version="v1.1.43"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -453,6 +453,9 @@ function WAFinfo() {
 			echo "smart.host_reads                 : Not Available yet"
 			echo "smart.timed_workload             : less than 60 minutes (started on ${_timed_workload_started})"
 		else
+                        if [[ ${_WAF} = "0" ]] ; then
+                                _WAF="no data is written by the host since timed_workload is started"
+			fi
 			if [[ ${_VUsmart_E2} -eq 0 ]] ; then
 				echo "smart.write_amplification_factor : ${_WAF}"
 				echo "smart.media_wear_percentage      : <0.001%"
