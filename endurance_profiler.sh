@@ -9,7 +9,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.44"
+_version="v1.1.45"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -412,7 +412,7 @@ function resetWorkloadTimer() {
 	return 0
 }
 
-function WAFinfo() {
+function info() {
 	local _nvme_namespace
 	local _WAF
 	local _market_name
@@ -599,7 +599,7 @@ function clean() {
 }
 
 function global_usage() {
-	local _options="[start | stop | restart | status | resetWorkloadTimer | WAFinfo | set | version | clean]"
+	local _options="[start | stop | restart | status | resetWorkloadTimer | info | set | version | clean]"
 
 	echo "Usage: $(basename "$1") ${_options}"
 	return 0
@@ -654,8 +654,11 @@ case "$1" in
 	resetWorkloadTimer|ResetWorkloadTimer|resetworkloadtimer|rwt|RWT|RESETWORKLOADTIMER)
 		resetWorkloadTimer
 		;;
+	info|Info|INFO)
+		info
+		;;
 	WAFinfo|wafinfo|WafInfo|wi|WI|WAFINFO)
-		WAFinfo
+		info
 		;;
 	setDevice|SetDevice|setdevice|sd|SD|SETDEVICE)
 		setDevice "$2"

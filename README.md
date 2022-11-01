@@ -51,7 +51,7 @@ The status can be *running* or *not running*.
 
 Resets the workload timer.
 
-### WAFinfo
+### info
 
 Prints the Write Amplification Factor (WAF) and other information for the SSD.
 
@@ -79,7 +79,7 @@ Every minute one line is added to the file.
 File grows about 125KB per day.  
 It is recommended to use a tool such as logrotate to allow automatic rotation, compression, removal, and mailing of log files.
 
-## WAF info output
+## info output
 
 - **Drive**: the drive's market name.
 - **Serial number**: the drive's serial number.
@@ -106,7 +106,7 @@ Calling the script without a parameter will result in printing the supported opt
 
 ```text
 # ./endurance_profiler.sh
-[start | stop | restart | status | resetWorkloadTimer | WAFinfo | set | version | clean]
+[start | stop | restart | status | resetWorkloadTimer | info | set | version | clean]
 ```
 
 Check the status of the service:
@@ -142,14 +142,14 @@ Check the status of the service:
 [STATUS] Service ./endurance_profiler.sh with pid=7936 running
 ```
 
-To get a good estimation for the information returned by the WAFinfo command it is suggested to run a workload for a significant amount of time.  
+To get a good estimation for the information returned by the info command it is suggested to run a workload for a significant amount of time.  
 Media wear, host reads and timed workload are only updated after one hour.  
 Write Amplification Factor, Drive life, Endurance and Data written are based on Media Wear since resetting the workload timer. It might require a workload to write multiple times the drive's capacity to get a high enough Media Wear percentage.
 
 Check the Write Amplification Info:
 
 ```text
-# ./endurance_profiler.sh WAFinfo
+# ./endurance_profiler.sh info
 Drive                            : Intel(R) SSD DC P5520   Series 3840GB
 Serial number                    : PHAX217400CZ3P8CGN
 Firmware version                 : 9CV10200
@@ -213,7 +213,7 @@ This parameter is required before the service can be started.
 
 **db**  
 The parameter indicates if and where the evaluated SMART attributes and bandwidth will be logged.
-Logging is not required to get the Write Amplification Factor through the WAFinfo option.
+Logging is not required to get the Write Amplification Factor through the info option.
 
 - supported values: graphite, logfile, graphite+logfile, none
 - default: none
