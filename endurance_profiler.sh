@@ -9,7 +9,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.45"
+_version="v1.1.46"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -461,7 +461,7 @@ function info() {
                                 _WAF="no data is written by the host since timed_workload is started"
 			fi
 			if [[ ${_VUsmart_E2} -eq 0 ]] ; then
-				echo "smart.write_amplification_factor : ${_WAF}"
+				echo "smart.write_amplification_factor : ${_WAF/#./0.}"
 				echo "smart.media_wear_percentage      : <0.001%"
 				echo "smart.host_reads                 : ${_VUsmart_E3}%"
 				echo "smart.timed_workload             : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
@@ -476,12 +476,12 @@ function info() {
 				_hostWrites="${_VUsmart_F5}-${_VUsmart_F5_before}"
 				_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
 				_dataWrittenTB=$(echo "scale=3;${_dataWritten}/${_TB_in_bytes}" | bc -l)
-				echo "smart.write_amplification_factor : ${_WAF}"
+				echo "smart.write_amplification_factor : ${_WAF/#./0.}"
 				echo "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
 				echo "smart.host_reads                 : ${_VUsmart_E3}%"
 				echo "smart.timed_workload             : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
 				echo "Drive life                       : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
-				echo "Endurance                        : ${_DWPD} DWPD"
+				echo "Endurance                        : ${_DWPD/#./0.} DWPD"
 				echo "Data written                     : ${_dataWrittenTB} TB (${_dataWritten} bytes)"
 			fi
 		fi
