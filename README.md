@@ -20,11 +20,23 @@ Starts the *endurance_profiler* service. It will log all the required Vendor Uni
 
 When *endurance_profiler.sh start* is called it will complete immediately and a background process will keep running until *endurance_profiler.sh stop* is called.
 The status of the service can be checked with the option *status*.
-Start will fail if no device is set with setDevice option.
+Start will fail if no device is *set* with *set device* option.
 
 ### stop
 
 Stops the *endurance_profiler* service and stops logging the Vendor Unique Smart Attributes.
+
+### set
+
+Sets configurable parameters for the *endurance_profiler* service
+
+- **device**
+- **db**
+- **nc_graphite_destination**
+- **nc_graphite_port**
+- **console_logging**
+
+See below form more information about Configurable Parameters.
 
 ### restart
 
@@ -51,12 +63,6 @@ Shows the version of the tool.
 
 Removes all files that were created when running the tool. Including the log files.
 
-### setDevice nvmeXnX
-
-Sets the device to be monitored.
-This option has one mandatory parameter: the nvme device e.g. nvme1n1
-The option is required before the service can be started.
-
 ## Tested Operating Systems
 
 - Ubuntu 18.04, 20.04, 22.04  
@@ -71,7 +77,7 @@ The performance impact of the tool is minimal.
 The data log file endurance_profiler.data.log is located in /var/log/endurance_profiler.
 Every minute one line is added to the file.
 File grows about 125KB per day.  
-It is recomended to use a tool such as logrotate to allow automatic rotation, compression, removal, and mailing of log files.
+It is recommended to use a tool such as logrotate to allow automatic rotation, compression, removal, and mailing of log files.
 
 ## WAF info output
 
@@ -100,7 +106,7 @@ Calling the script without a parameter will result in printing the supported opt
 
 ```text
 # ./endurance_profiler.sh
-[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|version|clean]
+[start | stop | restart | status | resetWorkloadTimer | WAFinfo | set | version | clean]
 ```
 
 Check the status of the service:
@@ -113,9 +119,10 @@ Check the status of the service:
 Set the NVMe device to be monitored:
 
 ```text
-# ./endurance_profiler.sh setDevice nvme1n1
+./endurance_profiler.sh set device nvme1n1
 [CHECKNVMENAMESPACE] nvme device nvme1n1 exists
 [SETDEVICE] Device set to nvme1n1
+[RESETWORKLOADTIMER] Workload Timer Reset on nvme1 at Tue Nov  1 03:15:40 PM CET 2022
 ```
 
 Start the service:
@@ -186,18 +193,26 @@ removed '/var/log/endurance_profiler/endurance_profiler.F5_before.var'
 removed directory '/var/log/endurance_profiler'
 ```
 
-## Configurable variables
+## Configurable parameters
 
-The following variables in the **./endurance_profiler.sh** script are configurable.
+The following parameters are configurable and can be set with command set.
 
-``` text
-_db=none
-_nc_graphite_destination=localhost
-_nc_graphite_port=2003
-```
+- device
+- db
+- nc_graphite_destination
+- nc_graphite_port
+- console_logging
 
-**_db**  
-The variable indicates if and where the evaluated SMART attributes and bandwidth will be logged.
+**device**  
+A mandatory parameter. Indicates the nvme device to be monitored by the tool.
+
+- supported values: existing nvme devices. Required format: nvmeXnX
+- default: empty
+
+This parameter is required before the service can be started.
+
+**db**  
+The parameter indicates if and where the evaluated SMART attributes and bandwidth will be logged.
 Logging is not required to get the Write Amplification Factor through the WAFinfo option.
 
 - supported values: graphite, logfile, graphite+logfile, none
@@ -233,16 +248,23 @@ The following bandwidth metrics are evaluated every second:
 - readBW
 - writeBW
 
-**_nc_graphite_destination**  
-This variable will be used as destination address when _db=graphite.
+**nc_graphite_destination**  
+This parameter will be used as destination address when the variable *db* is set to *graphite*.
 The destination address can be localhost or a remote IP address.
 
 - supported values: all IP addresses
 - default: localhost
 
-**_nc_graphite_port**  
-This variable will be used as destination port when _db=graphite.
+**nc_graphite_port**  
+This parameter will be used as destination port when the variable *db* is set to *graphite*.
 The destination port can be any IP port.
 
 - supported values: all IP ports
 - default: 2003
+
+**console_logging**  
+Indicates if the output to console is also redirected to /var/log/endurance_profiler/endurance_profiler.data.log
+
+- supported values: true, false
+- default: true
+

@@ -2,14 +2,14 @@
 # Copyright 2021 Solidigm.
 # SPDX-License-Identifier: BSD-3-Clause
 
-# User configurable variables
+# Default values for user configurable variables 
 _db=none
 _nc_graphite_destination=localhost
 _nc_graphite_port=2003
-_console_logging=false
+_console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.43"
+_version="v1.1.44"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -22,6 +22,10 @@ _nvme_namespacefile=/var/log/${_filename}/${_filename}.nvmenamespace.var
 _VUsmart_F4_beforefile=/var/log/${_filename}/${_filename}.F4_before.var
 _VUsmart_F5_beforefile=/var/log/${_filename}/${_filename}.F5_before.var
 _timed_workload_startedfile=/var/log/${_filename}/${_filename}.timed_workload_started.var
+_dbfile=/var/log/${_filename}/${_filename}.db.var
+_nc_graphite_destinationfile=/var/log/${_filename}/${_filename}.nc_graphite_destination.var
+_nc_graphite_portfile=/var/log/${_filename}/${_filename}.nc_graphite_port.var
+_console_loggingfile=/var/log/${_filename}/${_filename}.console_logging.var
 _db_not_supported="not logged"
 
 _TB_in_bytes=1000000000000
@@ -447,7 +451,7 @@ function WAFinfo() {
 		echo "Serial number                    : ${_serial_number}"
 		echo "Firmware version                 : ${_firmware}"
 		echo "Device                           : /dev/${_nvme_namespace}"	
-		echo "Data log file                         : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
+		echo "Data log file                    : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
 			echo "smart.media_wear_percentage      : Not Available yet"
 			echo "smart.host_reads                 : Not Available yet"
@@ -511,6 +515,71 @@ function setDevice() {
 	fi
 }
 
+function setVariable() {
+        local _variable=$1
+        local _variablefile=$2
+        local _value=$3
+
+	case "${_variable}" in 
+		_db)
+			if [[ ${_value} != "none" &&  ${_value} != "graphite" && ${_value} != "logfile" &&  ${_value} != "graphite+logfile" ]] ; then
+				log "[SETVARIABLE] ${_value} for db is not supported. Supported values: none,graphite,logfile,graphite+logfile"
+				return 1
+			fi
+			_db=${_value}
+			;;
+		_nc_graphite_destination)
+			_nc_graphite_destination=${_value}
+			;;
+		_nc_graphite_port)
+			_nc_graphite_port=${_value}
+			;;
+		_console_logging)
+			if [[ "${_value}" != "true" && "${_value}" != "false" ]] ; then
+				log "[SETVARIABLE] ${_value} for console_logging is not supported. Supported values: true,false"
+				return 1
+			fi
+			_console_logging=${_value}
+			if [[ "${_value}" = "true" ]] ; then
+				log "[SETVARIABLE] console_logging=true logging console to ${_datalogfile}"
+			fi
+			;;
+	esac
+	
+	echo "${_value}" > "${_variablefile}"
+	log "[SETVARIABLE] Variable ${_variable} set to ${_value}"
+	return 0
+}
+
+function retrieve_variables() {
+	if [[ -s ${_dbfile} ]] ; then
+	       # _dbfile is not empty
+		_db=$(cat "${_dbfile}")
+	else
+		echo "${_db}" > "${_dbfile}"
+	fi
+        if [[ -s "${_nc_graphite_destinationfile}" ]] ; then
+               # _dbfile is not empty
+                _nc_graphite_destination=$(cat "${_nc_graphite_destinationfile}")
+        else
+                echo "${_nc_graphite_destination}" > "${_nc_graphite_destinationfile}"
+        fi
+        if [[ -s "${_nc_graphite_portfile}" ]] ; then
+               # _dbfile is not empty
+                _nc_graphite_port=$(cat "${_nc_graphite_portfile}")
+        else
+                echo "${_nc_graphite_port}" > "${_nc_graphite_portfile}"
+        fi
+        if [[ -s "${_console_loggingfile}" ]] ; then
+               # _dbfile is not empty
+                _console_logging=$(cat "${_console_loggingfile}")
+        else
+                echo "${_console_logging}" > "${_console_loggingfile}"
+        fi
+	
+	return 0
+}
+
 function showVersion() {
 	echo "Version: ${_version}"
 	return 0
@@ -529,10 +598,17 @@ function clean() {
 	fi
 }
 
-function usage() {
-	local _options="[start|stop|restart|status|resetWorkloadTimer|WAFinfo|setDevice|version|clean]"
+function global_usage() {
+	local _options="[start | stop | restart | status | resetWorkloadTimer | WAFinfo | set | version | clean]"
 
 	echo "Usage: $(basename "$1") ${_options}"
+	return 0
+}
+
+function set_usage() {
+	local _options="[device | db | nc_graphite_destination | nc_graphite_port | console_logging]"
+	
+	echo "Usage: $(basename "$1") set ${_options}"
 	return 0
 }
 
@@ -555,6 +631,12 @@ touch "${_nvme_namespacefile}" >/dev/null 2>&1 || log "Error creating ${_nvme_na
 touch "${_VUsmart_F4_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsmart_F4_beforefile}"
 touch "${_VUsmart_F5_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsmart_F5_beforefile}"
 touch "${_timed_workload_startedfile}" >/dev/null 2>&1 || log "Error creating ${_timed_workload_startedfile}"
+touch "${_dbfile}" >/dev/null 2>&1 || log "Error creating ${_dbfile}"
+touch "${_nc_graphite_destinationfile}" >/dev/null 2>&1 || log "Error creating ${_nc_graphite_destinationfile}"
+touch "${_nc_graphite_portfile}" >/dev/null 2>&1 || log "Error creating ${_nc_graphite_portfile}"
+touch "${_console_loggingfile}" >/dev/null 2>&1 || log "Error creating ${_console_loggingfile}"
+
+retrieve_variables
 
 case "$1" in
 	status|Status|STATUS)
@@ -578,6 +660,29 @@ case "$1" in
 	setDevice|SetDevice|setdevice|sd|SD|SETDEVICE)
 		setDevice "$2"
 		;;
+	set|Set|SET)
+		case "$2" in
+			device|Device|DEVICE)
+				setDevice "$3"
+				;;
+			db|Db|DB)
+				setVariable "_db" "${_dbfile}" "$3"
+				;;
+			nc_graphite_destination)
+				setVariable "_nc_graphite_destination" "${_nc_graphite_destinationfile}" "$3"
+				;;
+			nc_graphite_port)
+				setVariable "_nc_graphite_port" "${_nc_graphite_portfile}" "$3"
+				;;
+			console_logging)
+				setVariable "_console_logging" "${_console_loggingfile}" "$3"
+				;;
+			*)
+				set_usage "$0"
+				exit 1
+				;;
+		esac
+		;;
 	version|Version|VERSION)
 		showVersion
 		;;
@@ -585,7 +690,7 @@ case "$1" in
 		clean
 		;;
 	*)
-		usage "$0"
+		global_usage "$0"
 		exit 1
 		;;
 esac
