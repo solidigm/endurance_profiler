@@ -238,7 +238,7 @@ function loop() {
 
 function log() {
 	echo "$*"
-	if [[ "${_console_logging}" = true ]] ; then
+	if [[ "${_console_logging}" == "true" ]] ; then
 		echo "$(date "+%F-%H:%M:%S") $*" >> "${_consolelogfile}"
 	fi
 	return 0
@@ -447,25 +447,25 @@ function info() {
 		_timed_workload_started=$(cat "${_timed_workload_startedfile}")
 		_datalogfile_size=$(find "${_datalogfile}" -printf "%s" )
 
-		echo "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
-		echo "Serial number                    : ${_serial_number}"
-		echo "Firmware version                 : ${_firmware}"
-		echo "Device                           : /dev/${_nvme_namespace}"	
-		echo "Data log file                    : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
+		log "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
+		log "Serial number                    : ${_serial_number}"
+		log "Firmware version                 : ${_firmware}"
+		log "Device                           : /dev/${_nvme_namespace}"	
+		log "Data log file                    : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
-			echo "smart.media_wear_percentage      : Not Available yet"
-			echo "smart.host_reads                 : Not Available yet"
-			echo "smart.timed_workload             : less than 60 minutes (started on ${_timed_workload_started})"
+			log "smart.media_wear_percentage      : Not Available yet"
+			log "smart.host_reads                 : Not Available yet"
+			log "smart.timed_workload             : less than 60 minutes (started on ${_timed_workload_started})"
 		else
                         if [[ ${_WAF} = "0" ]] ; then
                                 _WAF="no data is written by the host since timed_workload is started"
 			fi
 			if [[ ${_VUsmart_E2} -eq 0 ]] ; then
-				echo "smart.write_amplification_factor : ${_WAF/#./0.}"
-				echo "smart.media_wear_percentage      : <0.001%"
-				echo "smart.host_reads                 : ${_VUsmart_E3}%"
-				echo "smart.timed_workload             : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
-				echo "Drive life                       : smart.media_wear_percentage to small to calculate Drive life"
+				log "smart.write_amplification_factor : ${_WAF/#./0.}"
+				log "smart.media_wear_percentage      : <0.001%"
+				log "smart.host_reads                 : ${_VUsmart_E3}%"
+				log "smart.timed_workload             : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
+				log "Drive life                       : smart.media_wear_percentage to small to calculate Drive life"
 			else
 				_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
 				_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
@@ -476,13 +476,13 @@ function info() {
 				_hostWrites="${_VUsmart_F5}-${_VUsmart_F5_before}"
 				_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
 				_dataWrittenTB=$(echo "scale=3;${_dataWritten}/${_TB_in_bytes}" | bc -l)
-				echo "smart.write_amplification_factor : ${_WAF/#./0.}"
-				echo "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
-				echo "smart.host_reads                 : ${_VUsmart_E3}%"
-				echo "smart.timed_workload             : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
-				echo "Drive life                       : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
-				echo "Endurance                        : ${_DWPD/#./0.} DWPD"
-				echo "Data written                     : ${_dataWrittenTB} TB (${_dataWritten} bytes)"
+				log "smart.write_amplification_factor : ${_WAF/#./0.}"
+				log "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
+				log "smart.host_reads                 : ${_VUsmart_E3}%"
+				log "smart.timed_workload             : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
+				log "Drive life                       : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
+				log "Endurance                        : ${_DWPD/#./0.} DWPD"
+				log "Data written                     : ${_dataWrittenTB} TB (${_dataWritten} bytes)"
 			fi
 		fi
 		return 0
@@ -539,10 +539,16 @@ function setVariable() {
 				log "[SETVARIABLE] ${_value} for console_logging is not supported. Supported values: true,false"
 				return 1
 			fi
-			_console_logging=${_value}
-			if [[ "${_value}" = "true" ]] ; then
-				log "[SETVARIABLE] console_logging=true logging console to ${_datalogfile}"
+			if [[ "${_value}" == "false" ]] ; then
+				echo "${_value}" > "${_variablefile}"
+				log "[SETVARIABLE] Variable ${_variable} set to false"
+				return 0
 			fi
+			_console_logging=${_value}
+			;;
+		*)
+			log "[SETVARIABLE] ${_variable} = ${_value} is not supported"
+			return 1
 			;;
 	esac
 	
@@ -553,25 +559,25 @@ function setVariable() {
 
 function retrieve_variables() {
 	if [[ -s ${_dbfile} ]] ; then
-	       # _dbfile is not empty
+	       # _dbfile is not empty, read value from file
 		_db=$(cat "${_dbfile}")
 	else
 		echo "${_db}" > "${_dbfile}"
 	fi
         if [[ -s "${_nc_graphite_destinationfile}" ]] ; then
-               # _dbfile is not empty
+               # _nc_graphite_destinationfile is not empty, read value from file
                 _nc_graphite_destination=$(cat "${_nc_graphite_destinationfile}")
         else
                 echo "${_nc_graphite_destination}" > "${_nc_graphite_destinationfile}"
         fi
         if [[ -s "${_nc_graphite_portfile}" ]] ; then
-               # _dbfile is not empty
+               # _nc_graphite_portfile is not empty, read value from file
                 _nc_graphite_port=$(cat "${_nc_graphite_portfile}")
         else
                 echo "${_nc_graphite_port}" > "${_nc_graphite_portfile}"
         fi
         if [[ -s "${_console_loggingfile}" ]] ; then
-               # _dbfile is not empty
+               # _console_loggingfile is not empty, read value from file
                 _console_logging=$(cat "${_console_loggingfile}")
         else
                 echo "${_console_logging}" > "${_console_loggingfile}"
@@ -631,10 +637,9 @@ touch "${_nvme_namespacefile}" >/dev/null 2>&1 || log "Error creating ${_nvme_na
 touch "${_VUsmart_F4_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsmart_F4_beforefile}"
 touch "${_VUsmart_F5_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsmart_F5_beforefile}"
 touch "${_timed_workload_startedfile}" >/dev/null 2>&1 || log "Error creating ${_timed_workload_startedfile}"
-touch "${_dbfile}" >/dev/null 2>&1 || log "Error creating ${_dbfile}"
+touch "${_dbfile}" >/dev/null 2>&1 || log "Error creating ${_dbfile}"
 touch "${_nc_graphite_destinationfile}" >/dev/null 2>&1 || log "Error creating ${_nc_graphite_destinationfile}"
 touch "${_nc_graphite_portfile}" >/dev/null 2>&1 || log "Error creating ${_nc_graphite_portfile}"
-touch "${_console_loggingfile}" >/dev/null 2>&1 || log "Error creating ${_console_loggingfile}"
 
 retrieve_variables
 
