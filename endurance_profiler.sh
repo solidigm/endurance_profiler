@@ -3,13 +3,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # Default values for user configurable variables 
+_nvme_namespace=""
 _db=none
 _nc_graphite_destination=localhost
 _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.46"
+_version="v1.1.48"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -457,8 +458,8 @@ function info() {
 			log "smart.host_reads                 : Not Available yet"
 			log "smart.timed_workload             : less than 60 minutes (started on ${_timed_workload_started})"
 		else
-                        if [[ ${_WAF} = "0" ]] ; then
-                                _WAF="no data is written by the host since timed_workload is started"
+			if [[ ${_WAF} = "0" ]] ; then
+				_WAF="no data is written by the host since timed_workload is started"
 			fi
 			if [[ ${_VUsmart_E2} -eq 0 ]] ; then
 				log "smart.write_amplification_factor : ${_WAF/#./0.}"
@@ -515,15 +516,32 @@ function setDevice() {
 	fi
 }
 
+function getDevice() {
+	local _nvme_namespace=""
+
+	if [[ -s ${_nvme_namespacefile} ]] ; then
+		# _nvme_namespacefile is not empty, read value from file
+		_nvme_namespace=$(cat "${_nvme_namespacefile}")
+		log "[GETDEVICE] Device is set to ${_nvme_namespace}"
+	else
+		log "[GETDEVICE] Device is not set"
+	fi
+	return 0
+}
+
 function setVariable() {
-        local _variable=$1
-        local _variablefile=$2
-        local _value=$3
+	local _variable=$1
+	local _variablefile=$2
+	local _value=$3
+	local _db_options="[none | graphite | logfile | graphite+logfile]"
+	local _console_logging_options="[true | false]"
 
 	case "${_variable}" in 
 		_db)
 			if [[ ${_value} != "none" &&  ${_value} != "graphite" && ${_value} != "logfile" &&  ${_value} != "graphite+logfile" ]] ; then
-				log "[SETVARIABLE] ${_value} for db is not supported. Supported values: none,graphite,logfile,graphite+logfile"
+				log "[SETVARIABLE] ${_value} for db is not supported."
+				echo "Usage: $(basename "${_service}") set db ${_db_options}"
+
 				return 1
 			fi
 			_db=${_value}
@@ -536,7 +554,8 @@ function setVariable() {
 			;;
 		_console_logging)
 			if [[ "${_value}" != "true" && "${_value}" != "false" ]] ; then
-				log "[SETVARIABLE] ${_value} for console_logging is not supported. Supported values: true,false"
+				log "[SETVARIABLE] ${_value} for console_logging is not supported."
+				echo "Usage: $(basename "${_service}") set console_logging ${_console_logging_options}"
 				return 1
 			fi
 			if [[ "${_value}" == "false" ]] ; then
@@ -557,31 +576,58 @@ function setVariable() {
 	return 0
 }
 
+function getVariable() {
+	local _variable=$1
+	local _value=""
+
+	case "${_variable}" in
+		_db)
+			_value=${_db}
+			;;
+		_nc_graphite_destination)
+			_value=${_nc_graphite_destination}
+			;;
+		_nc_graphite_port)
+			_value=${_nc_graphite_port}
+			;;
+		_console_logging)
+			_value=${_console_logging}
+			;;
+		*)
+			log "[GETVARIABLE] ${_variable} is not supported"
+			return 1
+			;;
+	esac
+
+	log "[GETVARIABLE] Variable ${_variable} set to ${_value}"
+	return 0
+}
+
 function retrieve_variables() {
 	if [[ -s ${_dbfile} ]] ; then
-	       # _dbfile is not empty, read value from file
+		# _dbfile is not empty, read value from file
 		_db=$(cat "${_dbfile}")
 	else
 		echo "${_db}" > "${_dbfile}"
 	fi
-        if [[ -s "${_nc_graphite_destinationfile}" ]] ; then
-               # _nc_graphite_destinationfile is not empty, read value from file
-                _nc_graphite_destination=$(cat "${_nc_graphite_destinationfile}")
-        else
-                echo "${_nc_graphite_destination}" > "${_nc_graphite_destinationfile}"
-        fi
-        if [[ -s "${_nc_graphite_portfile}" ]] ; then
-               # _nc_graphite_portfile is not empty, read value from file
-                _nc_graphite_port=$(cat "${_nc_graphite_portfile}")
-        else
-                echo "${_nc_graphite_port}" > "${_nc_graphite_portfile}"
-        fi
-        if [[ -s "${_console_loggingfile}" ]] ; then
-               # _console_loggingfile is not empty, read value from file
-                _console_logging=$(cat "${_console_loggingfile}")
-        else
-                echo "${_console_logging}" > "${_console_loggingfile}"
-        fi
+	if [[ -s "${_nc_graphite_destinationfile}" ]] ; then
+		# _nc_graphite_destinationfile is not empty, read value from file
+		_nc_graphite_destination=$(cat "${_nc_graphite_destinationfile}")
+	else
+		echo "${_nc_graphite_destination}" > "${_nc_graphite_destinationfile}"
+	fi
+	if [[ -s "${_nc_graphite_portfile}" ]] ; then
+		# _nc_graphite_portfile is not empty, read value from file
+		_nc_graphite_port=$(cat "${_nc_graphite_portfile}")
+	else
+		echo "${_nc_graphite_port}" > "${_nc_graphite_portfile}"
+	fi
+	if [[ -s "${_console_loggingfile}" ]] ; then
+		# _console_loggingfile is not empty, read value from file
+		_console_logging=$(cat "${_console_loggingfile}")
+	else
+		echo "${_console_logging}" > "${_console_loggingfile}"
+	fi
 	
 	return 0
 }
@@ -605,7 +651,7 @@ function clean() {
 }
 
 function global_usage() {
-	local _options="[start | stop | restart | status | resetWorkloadTimer | info | set | version | clean]"
+	local _options="[start | stop | restart | status | resetWorkloadTimer | info | set | get | version | clean]"
 
 	echo "Usage: $(basename "$1") ${_options}"
 	return 0
@@ -613,8 +659,15 @@ function global_usage() {
 
 function set_usage() {
 	local _options="[device | db | nc_graphite_destination | nc_graphite_port | console_logging]"
-	
+
 	echo "Usage: $(basename "$1") set ${_options}"
+	return 0
+}
+
+function get_usage() {
+	local _options="[device | db | nc_graphite_destination | nc_graphite_port | console_logging | all]"
+
+	echo "Usage: $(basename "$1") get ${_options}"
 	return 0
 }
 
@@ -686,7 +739,37 @@ case "$1" in
 				setVariable "_console_logging" "${_console_loggingfile}" "$3"
 				;;
 			*)
-				set_usage "$0"
+				set_usage "${_service}"
+				exit 1
+				;;
+		esac
+		;;
+	get|Get|GET)
+		case "$2" in
+			device|Device|DEVICE)
+				getDevice
+				;;
+			db|Db|DB)
+				getVariable "_db"
+				;;
+			nc_graphite_destination)
+				getVariable "_nc_graphite_destination"
+				;;
+			nc_graphite_port)
+				getVariable "_nc_graphite_port"
+				;;
+			console_logging)
+				getVariable "_console_logging"
+				;;
+			all|All|ALL)
+				getDevice
+				getVariable "_db"
+				getVariable "_nc_graphite_destination"
+				getVariable "_nc_graphite_port"
+				getVariable "_console_logging"
+				;;
+			*)
+				get_usage "${_service}"
 				exit 1
 				;;
 		esac
@@ -698,7 +781,7 @@ case "$1" in
 		clean
 		;;
 	*)
-		global_usage "$0"
+		global_usage "${_service}"
 		exit 1
 		;;
 esac

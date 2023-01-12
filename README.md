@@ -38,6 +38,10 @@ Sets configurable parameters for the *endurance_profiler* service
 
 See below form more information about Configurable Parameters.
 
+### get
+
+Returns the value of a Configurable Parameter.
+
 ### restart
 
 Stops and restarts the *endurance_profiler* service.
@@ -106,7 +110,7 @@ Calling the script without a parameter will result in printing the supported opt
 
 ```text
 # ./endurance_profiler.sh
-[start | stop | restart | status | resetWorkloadTimer | info | set | version | clean]
+[start | stop | restart | status | resetWorkloadTimer | info | set | get | version | clean]
 ```
 
 Check the status of the service:
@@ -267,4 +271,3 @@ Indicates if the output to console is also redirected to /var/log/endurance_prof
 
 - supported values: true, false
 - default: true
-
