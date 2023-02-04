@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.49"
+_version="v1.1.50"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -331,7 +331,9 @@ function start() {
 				log "[START] Invalid nvme namespace parameter."
 				return 1
 			else
-				log "[START] Logging namespace ${_nvme_namespace}. Data log filename ${_datalogfile}"
+				log "[START] Logging namespace ${_nvme_namespace}."
+				log "[START] Data log filename ${_datalogfile}"
+				log "[START] Console log filename ${_consolelogfile}"
 				log "[START] ${_nvme_namespacefile} exists and namespace=${_nvme_namespace}"
 				log "[START] Sending endurance data to database=${_db}"
 
@@ -447,12 +449,14 @@ function info() {
 		_VUsmart_E4=$(get_vusmart_log "${_nvme_namespace}" 0x59)
 		_timed_workload_started=$(cat "${_timed_workload_startedfile}")
 		_datalogfile_size=$(find "${_datalogfile}" -printf "%s" )
+		_consolelogfile_size=$(find "${_consolelogfile}" -printf "%s" )
 
 		log "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
 		log "Serial number                    : ${_serial_number}"
 		log "Firmware version                 : ${_firmware}"
 		log "Device                           : /dev/${_nvme_namespace}"	
 		log "Data log file                    : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
+		log "Console log file                 : ${_consolelogfile} (size: $((_consolelogfile_size/1000)) KB)"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
 			log "smart.media_wear_percentage      : Not Available yet"
 			log "smart.host_reads                 : Not Available yet"

@@ -76,11 +76,11 @@ Removes all files that were created when running the tool. Including the log fil
 
 The performance impact of the tool is minimal.
 
-## Data log file size
+## Log file size
 
 The data log file endurance_profiler.data.log is located in /var/log/endurance_profiler.
-Every minute one line is added to the file.
-File grows about 125KB per day.  
+Every minute one line is added to the file. This file grows about 125KB per day.
+The console log file endurance_profiler.console.log is located in /var/log/endurance_profiler.
 It is recommended to use a tool such as logrotate to allow automatic rotation, compression, removal, and mailing of log files.
 
 ## info output
