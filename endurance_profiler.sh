@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.48"
+_version="v1.1.49"
 _service="$0"
 # remove any leading directory components and .sh 
 _filename=$(basename "${_service}" .sh)
@@ -541,10 +541,13 @@ function setVariable() {
 			if [[ ${_value} != "none" &&  ${_value} != "graphite" && ${_value} != "logfile" &&  ${_value} != "graphite+logfile" ]] ; then
 				log "[SETVARIABLE] ${_value} for db is not supported."
 				echo "Usage: $(basename "${_service}") set db ${_db_options}"
-
 				return 1
 			fi
 			_db=${_value}
+			if status >/dev/null 2>&1 ; then
+				# background process running
+				restart
+			fi
 			;;
 		_nc_graphite_destination)
 			_nc_graphite_destination=${_value}
