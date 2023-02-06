@@ -10,9 +10,9 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.50"
+_version="v1.1.51"
 _service="$0"
-# remove any leading directory components and .sh 
+# remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
 
 _datalogfile=/var/log/${_filename}/${_filename}.data.log
@@ -38,11 +38,14 @@ _minutes_in_year=525600
 function check_command() {
 	# Function checks if the arguments are installed commands
 	# Function iterates over all function arguments and returns 1 if a command is not an installed command
+	# argument 1: a linux command
+	local _command=$1
+
 	while [ $# -gt 0 ] ; do
 		# check if a passed argument is an installed command
-		if ! command -v "$1" &> /dev/null ; then
-			log "[CHECKCOMMAND] Command $1 could not be found"
-			log "[CHECKCOMMAND] Command $1 is a required command. Try to install $1."
+		if ! command -v "${_command}" &> /dev/null ; then
+			log "[CHECKCOMMAND] Command ${_command} could not be found"
+			log "[CHECKCOMMAND] Command ${_command} is a required command. Try to install ${_command}."
 			# exit the script with error code 1 
 			exit 1
 		fi
@@ -56,7 +59,7 @@ function check_nvme_namespace() {
 	# Function returns 0 if namespace exists
 	# argument 1: a namespace
 	local _nvme_namespace=$1
-	local _ret
+	local _ret=0
 
 	if [[ ${_nvme_namespace} =~ ^nvme[0-9]+n[0-9]+$ ]] ; then
 		_ret=$(nvme list 2>/dev/null | grep "${_nvme_namespace}" 2>&1 >/dev/null)
@@ -92,13 +95,13 @@ function send_to_db() {
 
 	if [ "${_db}" = "graphite" ] ; then
 		# send the data to the graphite port and destination
-		echo "${_data}" | nc -N ${_nc_graphite_destination} ${_nc_graphite_port}
+		echo "${_data}" | nc -N "${_nc_graphite_destination}" "${_nc_graphite_port}"
 	elif [ "${_db}" = "logfile" ] ; then
 		# send the data the log file
 		echo "${_data}"
 	elif [ "${_db}" = "graphite+logfile" ] ; then
 		# send the data to the graphite port and destination, and to the datalogfile
-		echo "${_data}" | nc -N ${_nc_graphite_destination} ${_nc_graphite_port}
+		echo "${_data}" | nc -N "${_nc_graphite_destination}" "${_nc_graphite_port}"
 		echo "${_data}"
 	elif [ "${_db}" = "none" ] ; then
 		# don't do anything with the data
@@ -116,25 +119,30 @@ function send_to_db() {
 function get_vusmart_log() {
 	# Function will return the Intel/Solidigm Vendor Unique smart log info for the nvme device at an offset
 	# argument 1: nvme device
-	# argument 2: offset 
+	# argument 2: offset
 	local _local_nvme_namespace=$1
 	local _offset=$2
-	local _rev_vusmart_hexadecimal
+	local _rev_vusmart_hexadecimal=0
+	local _len=0
 
 	# get Vendor Unique smart attributes in binary format, get 6 bytes from position _offset
 	_vusmart_hexadecimal=$(nvme get-log /dev/"${_local_nvme_namespace}" --log-id 0xca --log-len 512 --raw-binary | xxd -l 6 -seek "${_offset}" -ps)
 	# reverse the variable _vusmart_hexadecimal
-	len=${#_vusmart_hexadecimal}
-	for((i=len;i>=0;i=i-2)); do _rev_vusmart_hexadecimal="$_rev_vusmart_hexadecimal${_vusmart_hexadecimal:$i:2}"; done
+	_len=${#_vusmart_hexadecimal}
+	for((i=_len;i>=0;i=i-2)); do _rev_vusmart_hexadecimal="$_rev_vusmart_hexadecimal${_vusmart_hexadecimal:$i:2}"; done
 	# convert _vusmart_hexadecimal to capital letter, convert to decimal and remove leading zeros
-	_vusmart_decimal=$(echo "ibase=16;${_rev_vusmart_hexadecimal^^}" | bc )
+	_vusmart_decimal=$(echo "ibase=16;${_rev_vusmart_hexadecimal^^}" | bc)
 	echo "${_vusmart_decimal}"
 	return 0
 }
 
 function loop() {
+	# function checks every second the bandwidth for the specified namespace and every minute for Vendor Unique Smart Attributes
+	# calculates teh WAF and sends all the data to the configured database
+	# argument 1: nvme namespace
+	local _nvme_namespace=$1
 	local _counter=0
-	local _hostWrites=1	
+	local _hostWrites=1
 	local _nandWrites=0
 	local _read_bandwidth=0
 	local _write_bandwidth=0
@@ -150,13 +158,10 @@ function loop() {
 	local _host_bytes_written=0
 	local _temperature=0
 	local _percentage_used=0
-	local _nvme_namespace=$1
 
 	_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
-
 	echo "${_service} ${_version}"
 	echo "date, media_wear_percentage, host_reads, timed_workload, NAND_bytes_written, host_bytes_written, WAF, temperature, percentage_used, drive_life_minutes, DWPD, dataWritten"
-
 	eval "$(awk '{printf "_readblocks_old=\"%s\" _writeblocks_old=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
 	while true; do
 		if ! ((_counter % 60)) ; then
@@ -168,7 +173,6 @@ function loop() {
 			_VUsmart_F5=$(get_vusmart_log "${_nvme_namespace}" 0x95)
 			_temperature=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep temperature | awk '{print $3}' | sed 's/[^0-9]*//g')
 			_percentage_used=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep percentage_used | awk '{print $3}' | sed 's/[^0-9]*//g')
-
 			_VUsmart_F4_before=$(cat "${_VUsmart_F4_beforefile}")
 			_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
 			if [[ "${_VUsmart_F5}" -eq "${_VUsmart_F5_before}" ]] ; then
@@ -203,8 +207,7 @@ function loop() {
 				fi
 				_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*${_host_written_unit}*${_minutes_in_day}/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
 			fi
-
-			send_to_db "smart.media_wear_percentage ${_media_wear_percentage} $(date +%s)"			
+			send_to_db "smart.media_wear_percentage ${_media_wear_percentage} $(date +%s)"
 			send_to_db "smart.host_reads ${_host_reads} $(date +%s)"
 			send_to_db "smart.timed_workload ${_timed_workload} $(date +%s)"
 			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
@@ -212,9 +215,9 @@ function loop() {
 			send_to_db "smart.dataWritten ${_dataWritten} $(date +%s)"
 			send_to_db "smart.DWPD ${_DWPD} $(date +%s)"
 			send_to_db "smart.temperature ${_temperature} $(date +%s)"
-			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"	
-			send_to_db "smart.write_amplicifation_factor ${_WAF} $(date +%s)"
-			echo "${_WAF}" > "${_WAFfile}"		
+			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"
+			send_to_db "smart.write_amplification_factor ${_WAF} $(date +%s)"
+			echo "${_WAF}" > "${_WAFfile}"
 			echo "$(date +%s), ${_VUsmart_E2}, ${_VUsmart_E3}, ${_VUsmart_E4}, ${_VUsmart_F4}, ${_VUsmart_F5}, ${_WAF}, ${_temperature}, ${_percentage_used}, ${_drive_life_minutes}, ${_DWPD}, ${_dataWritten}"
 			_counter=0
 		fi
@@ -230,7 +233,6 @@ function loop() {
 			send_to_db "nvme.readBW ${_read_bandwidth} $(date +%s)"
 			send_to_db "nvme.writeBW ${_write_bandwidth} $(date +%s)"
 		fi
-
 		_counter=$(( _counter + 1 ))
 		sleep 1
 	done
@@ -238,6 +240,9 @@ function loop() {
 }
 
 function log() {
+	# function will print the provided argument on the terminal and log it to the console log file if console logging is enabled
+	# arguments: multiple strings
+
 	echo "$*"
 	if [[ "${_console_logging}" == "true" ]] ; then
 		echo "$(date "+%F-%H:%M:%S") $*" >> "${_consolelogfile}"
@@ -248,7 +253,7 @@ function log() {
 function retrieve_pid() {
 	# echo the process id of the running background process
 	# if not running echo 0 as 0 is an invalid pid
-	local _pid
+	local _pid=0
 
 	if [ -s "${_pidfile}" ] ; then
 		# file ${_pid} is not empty
@@ -271,6 +276,7 @@ function retrieve_nvme_namespace() {
 	# echo the namespace retrieved from the file ${_nvme_namespacefile}
 	# only returns the namespace when it exists in the system 
 	# if an error found return an empty string
+
 	if [ -s "${_nvme_namespacefile}" ] ; then
 		# the file ${_nvme_namespacefile} exists
 		_nvme_namespace=$(cat "${_nvme_namespacefile}")
@@ -295,15 +301,14 @@ function retrieve_nvme_namespace() {
 		# the file ${_nvme_namespacefile} does not exists
 		echo ""
 	fi
-
 	return 0
 }
 
 function status() {
-	local _pid
+	# log if the background process is running and return 0, or return 1 if not
+	local _pid=0
 
 	_pid=$(retrieve_pid)
-
 	if [[ "${_pid}" -gt 0 ]] ; then
 		# background process running
 		log "[STATUS] Service ${_service} with pid=${_pid} running"
@@ -316,8 +321,9 @@ function status() {
 }
 
 function start() {
-	local _pid
-	local _nvme_namespace
+	# Start the background process
+	local _pid=0
+	local _nvme_namespace=""
 
 	if status >/dev/null 2>&1 ; then
 		# background process running
@@ -331,7 +337,7 @@ function start() {
 				log "[START] Invalid nvme namespace parameter."
 				return 1
 			else
-				log "[START] Logging namespace ${_nvme_namespace}."
+				log "[START] Logging namespace ${_nvme_namespace}"
 				log "[START] Data log filename ${_datalogfile}"
 				log "[START] Console log filename ${_consolelogfile}"
 				log "[START] ${_nvme_namespacefile} exists and namespace=${_nvme_namespace}"
@@ -348,7 +354,7 @@ function start() {
 				echo $! > "${_pidfile}"
 
 				# check if background process is running
-				if ! status ; then 
+				if ! status ; then
 					log "[START] ${_service} failed to start"
 					rm "${_pidfile}"
 					return 1
@@ -365,10 +371,10 @@ function start() {
 }
 
 function stop() {
-	local _pid
+	# Stop the background process
+	local _pid=0
 
 	_pid=$(retrieve_pid)
-
 	if [[ "${_pid}" -gt 0 ]] ; then
 		# background process running
 		log "[STOP] Stopping ${_service} with pid=${_pid}"
@@ -384,16 +390,18 @@ function stop() {
 }
 
 function restart() {
+	# Restart the background process
 	stop
 	start
 	return 0
 }
 
 function resetWorkloadTimer() {
-	local _nvme_device
-	local _nvme_namespace
-	local _VUsmart_F4_before
-	local _VUsmart_F5_before
+	# Reset the workload timer by sending a Vendor Unique Set command to the device.
+	local _nvme_device=""
+	local _nvme_namespace=""
+	local _VUsmart_F4_before=0
+	local _VUsmart_F5_before=0
 
 	# background process running
 	_nvme_namespace=$(retrieve_nvme_namespace)
@@ -401,13 +409,11 @@ function resetWorkloadTimer() {
 		log "[RESETWORKLOADTIMER] Invalid nvme namespace parameter. Workload Timer not reset."
 		return 1
 	fi
-	_nvme_device=${_nvme_namespace/%n[0-9]*/} 
+	_nvme_device=${_nvme_namespace/%n[0-9]*/}
 	nvme set-feature -f 0xd5 -v 1 /dev/"${_nvme_device}" > /dev/null 2>&1
 	log "[RESETWORKLOADTIMER] Workload Timer Reset on ${_nvme_device} at $(date)"
-
 	_VUsmart_F4_before=$(get_vusmart_log "${_nvme_namespace}" 0x89)
-	_VUsmart_F5_before=$(get_vusmart_log "${_nvme_namespace}" 0x95)		
-
+	_VUsmart_F5_before=$(get_vusmart_log "${_nvme_namespace}" 0x95)
 	echo "${_VUsmart_F4_before}" > "${_VUsmart_F4_beforefile}"
 	echo "${_VUsmart_F5_before}" > "${_VUsmart_F5_beforefile}"
 	echo 0 > "${_WAFfile}"
@@ -416,18 +422,19 @@ function resetWorkloadTimer() {
 }
 
 function info() {
-	local _nvme_namespace
-	local _WAF
-	local _market_name
-	local _serial_number
-	local _tnvmcap
-	local _VUsmart_E2
-	local _VUsmart_E3
-	local _VUsmart_E4
-	local _media_wear_percentage
-	local _firmware
-	local _VUsmart_F5_before
-	local _VUsmart_F5
+	# show WAF and endurnace related information
+	local _nvme_namespace=""
+	local _WAF=0
+	local _market_name=""
+	local _serial_number=""
+	local _tnvmcap=0
+	local _VUsmart_E2=0
+	local _VUsmart_E3=0
+	local _VUsmart_E4=0
+	local _media_wear_percentage=0
+	local _firmware=""
+	local _VUsmart_F5_before=0
+	local _VUsmart_F5=0
 	local _hostWrites=0
 	local _dataWritten=0
 	local _dataWrittenTB=0
@@ -436,7 +443,7 @@ function info() {
 		# background process running
 		_nvme_namespace=$(retrieve_nvme_namespace)
 		if [ "${_nvme_namespace}" == "" ] ; then
-			log "[WAFINFO] Invalid nvme namespace parameter."
+			log "[INFO] Invalid nvme namespace parameter."
 			return 1
 		fi
 		_WAF=$(cat "${_WAFfile}")
@@ -450,11 +457,10 @@ function info() {
 		_timed_workload_started=$(cat "${_timed_workload_startedfile}")
 		_datalogfile_size=$(find "${_datalogfile}" -printf "%s" )
 		_consolelogfile_size=$(find "${_consolelogfile}" -printf "%s" )
-
 		log "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
 		log "Serial number                    : ${_serial_number}"
 		log "Firmware version                 : ${_firmware}"
-		log "Device                           : /dev/${_nvme_namespace}"	
+		log "Device                           : /dev/${_nvme_namespace}"
 		log "Data log file                    : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
 		log "Console log file                 : ${_consolelogfile} (size: $((_consolelogfile_size/1000)) KB)"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
@@ -484,7 +490,7 @@ function info() {
 				log "smart.write_amplification_factor : ${_WAF/#./0.}"
 				log "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
 				log "smart.host_reads                 : ${_VUsmart_E3}%"
-				log "smart.timed_workload             : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
+				log "smart.timed_workload             : ${_VUsmart_E4} minutes (started at ${_timed_workload_started})"
 				log "Drive life                       : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
 				log "Endurance                        : ${_DWPD/#./0.} DWPD"
 				log "Data written                     : ${_dataWrittenTB} TB (${_dataWritten} bytes)"
@@ -493,12 +499,14 @@ function info() {
 		return 0
 	else
 		# background process not running
-		log "[WAFINFO] ${_service} is not running."
+		log "[INFO] ${_service} is not running."
 		return 1
 	fi
 }
 
 function setDevice() {
+	# Write the nvme device configuration from global variable to file
+	# argument 1: nvme device
 	local _nvme_namespace=$1
 	
 	if status >/dev/null 2>&1 ; then
@@ -521,6 +529,7 @@ function setDevice() {
 }
 
 function getDevice() {
+	# Read the nvme device configuration from file and save in global variable
 	local _nvme_namespace=""
 
 	if [[ -s ${_nvme_namespacefile} ]] ; then
@@ -534,6 +543,10 @@ function getDevice() {
 }
 
 function setVariable() {
+	# Write a global variable to a file
+	# argument 1: a variable
+	# argument 2: a file name to save the variable
+	# argumetn 3: teh value for the variable
 	local _variable=$1
 	local _variablefile=$2
 	local _value=$3
@@ -577,13 +590,14 @@ function setVariable() {
 			return 1
 			;;
 	esac
-	
 	echo "${_value}" > "${_variablefile}"
 	log "[SETVARIABLE] Variable ${_variable} set to ${_value}"
 	return 0
 }
 
 function getVariable() {
+	# log a variable's value
+	# argument 1: a variable
 	local _variable=$1
 	local _value=""
 
@@ -605,12 +619,13 @@ function getVariable() {
 			return 1
 			;;
 	esac
-
 	log "[GETVARIABLE] Variable ${_variable} set to ${_value}"
 	return 0
 }
 
 function retrieve_variables() {
+	# Read the global variables from file
+
 	if [[ -s ${_dbfile} ]] ; then
 		# _dbfile is not empty, read value from file
 		_db=$(cat "${_dbfile}")
@@ -635,7 +650,6 @@ function retrieve_variables() {
 	else
 		echo "${_console_logging}" > "${_console_loggingfile}"
 	fi
-	
 	return 0
 }
 
@@ -645,6 +659,8 @@ function showVersion() {
 }
 
 function clean() {
+	# Delete all files created by this script
+
 	if status >/dev/null 2>&1 ; then
 		# background process running
 		log "[CLEAN] Can't remove used files. ${_service} is running."
@@ -678,6 +694,7 @@ function get_usage() {
 	return 0
 }
 
+# Script need to run as root user
 if [ "$(id -u)" -ne 0 ] ; then
 	log "${_service} need to run as root user or as super user"
 	exit 1
