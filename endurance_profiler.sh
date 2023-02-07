@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.51"
+_version="v1.1.52"
 _service="$0"
 # remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
@@ -457,45 +457,45 @@ function info() {
 		_timed_workload_started=$(cat "${_timed_workload_startedfile}")
 		_datalogfile_size=$(find "${_datalogfile}" -printf "%s" )
 		_consolelogfile_size=$(find "${_consolelogfile}" -printf "%s" )
-		log "Drive                            : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
-		log "Serial number                    : ${_serial_number}"
-		log "Firmware version                 : ${_firmware}"
-		log "Device                           : /dev/${_nvme_namespace}"
-		log "Data log file                    : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
-		log "Console log file                 : ${_consolelogfile} (size: $((_consolelogfile_size/1000)) KB)"
+		_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
+		_VUsmart_F5=$(get_vusmart_log "${_nvme_namespace}" 0x95)
+		_hostWrites="${_VUsmart_F5}-${_VUsmart_F5_before}"
+		_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
+		_dataWrittenTB=$(echo "scale=3;${_dataWritten}/${_TB_in_bytes}" | bc -l)
+		log "Drive                               : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
+		log "Serial number                       : ${_serial_number}"
+		log "Firmware version                    : ${_firmware}"
+		log "Device                              : /dev/${_nvme_namespace}"
+		log "Data log file                       : ${_datalogfile} (size: $((_datalogfile_size/1000)) KB)"
+		log "Console log file                    : ${_consolelogfile} (size: $((_consolelogfile_size/1000)) KB)"
 		if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
-			log "smart.media_wear_percentage      : Not Available yet"
-			log "smart.host_reads                 : Not Available yet"
-			log "smart.timed_workload             : less than 60 minutes (started on ${_timed_workload_started})"
+			log "smart.media_wear_percentage         : Not Available yet"
+			log "smart.host_reads                    : Not Available yet"
+			log "smart.timed_workload                : less than 60 minutes (started on ${_timed_workload_started})"
 		else
 			if [[ ${_WAF} = "0" ]] ; then
 				_WAF="no data is written by the host since timed_workload is started"
 			fi
 			if [[ ${_VUsmart_E2} -eq 0 ]] ; then
-				log "smart.write_amplification_factor : ${_WAF/#./0.}"
-				log "smart.media_wear_percentage      : <0.001%"
-				log "smart.host_reads                 : ${_VUsmart_E3}%"
-				log "smart.timed_workload             : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
-				log "Drive life                       : smart.media_wear_percentage to small to calculate Drive life"
+				log "smart.media_wear_percentage         : <0.001%"
+				log "smart.host_reads                    : ${_VUsmart_E3}%"
+				log "smart.timed_workload                : ${_VUsmart_E4} minutes (started on ${_timed_workload_started})"
+				log "Workload Write Amplification Factor : ${_WAF/#./0.}"
+				log "Workload drive life                 : smart.media_wear_percentage to small to calculate Drive life"
 			else
 				_media_wear_percentage=$(echo "scale=3;${_VUsmart_E2}/1024" | bc -l)
 				_drive_life_minutes=$(echo "scale=0;${_VUsmart_E4}*100*1024/${_VUsmart_E2}" | bc -l)
 				_drive_life_years=$(echo "scale=3;${_drive_life_minutes}/${_minutes_in_year}" | bc -l)
-				_VUsmart_F5_before=$(cat "${_VUsmart_F5_beforefile}")
-				_VUsmart_F5=$(get_vusmart_log "${_nvme_namespace}" 0x95)
 				_DWPD=$(echo "scale=2;((${_VUsmart_F5}-${_VUsmart_F5_before})*${_host_written_unit}*${_minutes_in_day}/${_VUsmart_E4})/${_tnvmcap}" | bc -l)
-				_hostWrites="${_VUsmart_F5}-${_VUsmart_F5_before}"
-				_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
-				_dataWrittenTB=$(echo "scale=3;${_dataWritten}/${_TB_in_bytes}" | bc -l)
-				log "smart.write_amplification_factor : ${_WAF/#./0.}"
-				log "smart.media_wear_percentage      : ${_media_wear_percentage/#./0.}%"
-				log "smart.host_reads                 : ${_VUsmart_E3}%"
-				log "smart.timed_workload             : ${_VUsmart_E4} minutes (started at ${_timed_workload_started})"
-				log "Drive life                       : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
-				log "Endurance                        : ${_DWPD/#./0.} DWPD"
-				log "Data written                     : ${_dataWrittenTB} TB (${_dataWritten} bytes)"
+				log "smart.media_wear_percentage         : ${_media_wear_percentage/#./0.}%"
+				log "smart.host_reads                    : ${_VUsmart_E3}%"
+				log "smart.timed_workload                : ${_VUsmart_E4} minutes (started at ${_timed_workload_started})"
+				log "Workload Write Amplification Factor : ${_WAF/#./0.}"
+				log "Workload drive life                 : ${_drive_life_years/#./0.} years (${_drive_life_minutes} minutes)"
+				log "Workload write rate                 : ${_DWPD/#./0.} DWPD"
 			fi
 		fi
+		log "Workload data written               : ${_dataWrittenTB/#./0.} TB (${_dataWritten} bytes)"
 		return 0
 	else
 		# background process not running

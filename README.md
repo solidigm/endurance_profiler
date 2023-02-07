@@ -91,15 +91,15 @@ It is recommended to use a tool such as logrotate to allow automatic rotation, c
 - **Device**: the drive's device name.
 - **Data Log file**: the endurance_profiler script data log file.
 - **Console Log file**: the endurance_profiler script console log file.
-- **write_amplification_factor**: the ratio of the amount of data actually written from the controller to the NAND to the amount of data sent from Operating System to the SSD since reset of the workload timer. The more data written since a reset of the workload timer the more accurate the Write Amplification Factor (WAF) result is.
 - **media_wear_percentage** : wear seen by the SSD since reset of the workload timer as a percentage of the max rated NAND cycles.
 - **host_reads** : the percentage of I/O operations that are read operations since reset of the workload timer.
 - **timed_workload**: the elapsed time in minutes since reset of the workload timer.
-- **Drive life** : the drive life expectancy of the drive's media in years. Do not use this information as an overall indicator of the drive life expectancy. Media is one component of many affecting drive lifespan.
+- **Write Amplification Factor**: the ratio of the amount of data actually written from the controller to the NAND to the amount of data sent from Operating System to the SSD since reset of the workload timer. The more data written since a reset of the workload timer the more accurate the Write Amplification Factor (WAF) result is.
+- **Workload drive life** : the drive life expectancy of the drive's media in years. Do not use this information as an overall indicator of the drive life expectancy. Media is one component of many affecting drive lifespan.
 Drive life is timed_workload divided by media_wear_percentage. The more data written since a reset of the workload timer the more accurate the drive life.
-- **Endurance** : Drive Writes Per Day (DWPD) represents the average amount of data written to the SSD per day since reset of the workload timer and measured in the drive's full capacity.
+- **Workload write rate** : the average amount of data written to the SSD per day since reset of the workload timer and measured in the drive's full capacity per day (Drive Writes Per Day)
 The more data written since a reset of the workload timer the more accurate the endurance expectancy.
-- **Data written**: Terabytes written by the host to the drive since reset of the workload timer.
+- **Workload data written**: Terabytes written by the host to the drive since reset of the workload timer.
 
 ## Dependencies
 
@@ -169,19 +169,19 @@ Check the Write Amplification Info:
 
 ```text
 # ./endurance_profiler.sh info
-Drive                            : Intel(R) SSD DC P5520   Series 3840GB
-Serial number                    : PHAX217400CZ3P8CGN
-Firmware version                 : 9CV10200
-Device                           : /dev/nvme0n1
-Data log file                    : /var/log/endurance_profiler/endurance_profiler.data.log (size: 132 KB)
-Console log file                 : /var/log/endurance_profiler/endurance_profiler.console.log (size: 68 KB)
-smart.write_amplification_factor : 2.75
-smart.media_wear_percentage      : 0.070%
-smart.host_reads                 : 0%
-smart.timed_workload             : 216 minutes (started at Sun  5 Feb 13:20:47 CET 2023)
-Drive life                       : 0.584 years (307200 minutes)
-Endurance                        : 21.55 DWPD
-Data written                     : 12.419 TB (12419232000000 bytes)
+Drive                               : Intel(R) SSD DC P5520   Series 3840GB
+Serial number                       : PHAX217400CZ3P8CGN
+Firmware version                    : 9CV10200
+Device                              : /dev/nvme0n1
+Data log file                       : /var/log/endurance_profiler/endurance_profiler.data.log (size: 132 KB)
+Console log file                    : /var/log/endurance_profiler/endurance_profiler.console.log (size: 68 KB)
+smart.media_wear_percentage         : 0.070%
+smart.host_reads                    : 0%
+smart.timed_workload                : 216 minutes (started at Sun  5 Feb 13:20:47 CET 2023)
+Workload Write Amplification Factor : 2.75
+Workload drive life                 : 0.584 years (307200 minutes)
+Workload write rate                 : 21.55 DWPD
+Workload data written               : 12.419 TB (12419232000000 bytes)
 ```
 
 Stop the service:
