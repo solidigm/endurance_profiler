@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.52"
+_version="v1.1.53"
 _service="$0"
 # remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
@@ -422,7 +422,7 @@ function resetWorkloadTimer() {
 }
 
 function info() {
-	# show WAF and endurnace related information
+	# show WAF and endurance related information
 	local _nvme_namespace=""
 	local _WAF=0
 	local _market_name=""
@@ -546,7 +546,8 @@ function setVariable() {
 	# Write a global variable to a file
 	# argument 1: a variable
 	# argument 2: a file name to save the variable
-	# argumetn 3: teh value for the variable
+	# argument 3: the value fce_profiler.data.log
+[START] Console log filename /var/log/endurance_profiler/enduor the variable
 	local _variable=$1
 	local _variablefile=$2
 	local _value=$3
@@ -735,6 +736,7 @@ case "$1" in
 		;;
 	resetWorkloadTimer|ResetWorkloadTimer|resetworkloadtimer|rwt|RWT|RESETWORKLOADTIMER)
 		resetWorkloadTimer
+		restart
 		;;
 	info|Info|INFO)
 		info
