@@ -546,8 +546,7 @@ function setVariable() {
 	# Write a global variable to a file
 	# argument 1: a variable
 	# argument 2: a file name to save the variable
-	# argument 3: the value fce_profiler.data.log
-[START] Console log filename /var/log/endurance_profiler/enduor the variable
+	# argument 3: the value for the variable
 	local _variable=$1
 	local _variablefile=$2
 	local _value=$3
