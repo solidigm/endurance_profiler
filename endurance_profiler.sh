@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.1.53"
+_version="v1.1.54"
 _service="$0"
 # remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
@@ -30,7 +30,7 @@ _console_loggingfile=/var/log/${_filename}/${_filename}.console_logging.var
 _db_not_supported="not logged"
 
 _TB_in_bytes=1000000000000
-_host_written_unit=32000000
+_host_written_unit=$(( 32 * 1024 * 1024 ))
 _bandwidth_blocksize=512
 _minutes_in_day=1440
 _minutes_in_year=525600
