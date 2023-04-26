@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.2.1"
+_version="v1.2.2"
 _service="$0"
 # remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
@@ -475,6 +475,11 @@ function info() {
 			log "smart.media_wear_percentage         : Not Available yet"
 			log "smart.host_reads                    : Not Available yet"
 			log "smart.timed_workload                : less than 60 minutes (started on ${_timed_workload_started})"
+			if [[ ${_WAF} = "0" ]] ; then
+				_WAF="no data is written by the host since timed_workload is started"
+			else
+				log "Workload Write Amplification Factor : ${_WAF/#./0.}"
+			fi
 		else
 			if [[ ${_WAF} = "0" ]] ; then
 				_WAF="no data is written by the host since timed_workload is started"
