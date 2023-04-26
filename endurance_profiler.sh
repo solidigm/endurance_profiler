@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.2.2"
+_version="v1.2.3"
 _service="$0"
 # remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
@@ -161,6 +161,7 @@ function loop() {
 	local _percentage_used=0
 
 	_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
+	_tnvmcap=${_tnvmcap//./}
 	echo "${_service} ${_version}"
 	echo "date, media_wear_percentage, host_reads, timed_workload, NAND_bytes_written, host_bytes_written, WAF, temperature, percentage_used, drive_life_minutes, DWPD, dataWritten"
 	eval "$(awk '{printf "_readblocks_old=\"%s\" _writeblocks_old=\"%s\"", $3 ,$7}' < /sys/block/"${_nvme_namespace}"/stat)"
@@ -453,6 +454,7 @@ function info() {
 		_serial_number=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep sn | awk '{print $3}')
 		_firmware=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep "fr " | awk '{print $3}')
 		_tnvmcap=$(nvme id-ctrl /dev/"${_nvme_namespace}" 2>stderr | grep tnvmcap | awk '{print $3}')
+		_tnvmcap=${_tnvmcap//./}
 		_VUsmart_E2=$(get_vusmart_log "${_nvme_namespace}" 0x41)
 		_VUsmart_E3=$(get_vusmart_log "${_nvme_namespace}" 0x4d)
 		_VUsmart_E4=$(get_vusmart_log "${_nvme_namespace}" 0x59)
