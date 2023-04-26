@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.2.3"
+_version="v1.2.4"
 _service="$0"
 # remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
@@ -190,7 +190,7 @@ function loop() {
 			fi
 			_host_bytes_written=$(echo "scale=0;${_VUsmart_F5}*${_host_written_unit}" | bc -l)
 			_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
-
+			_nanddataWritten=$(echo "scale=0;(${_nandWrites})*${_host_written_unit}" | bc -l)
 			if [[ ${_VUsmart_E4} -eq 65535 ]] ; then 
 				# ${_timed_workload_started} is less than 60 minutes, no real data for Vendor Unique smart attribute E2, E3 and E4
 				_media_wear_percentage=0
@@ -215,6 +215,7 @@ function loop() {
 			send_to_db "smart.drive_life ${_drive_life_minutes} $(date +%s)"
 			send_to_db "smart.host_bytes_written ${_host_bytes_written} $(date +%s)"
 			send_to_db "smart.dataWritten ${_dataWritten} $(date +%s)"
+			send_to_db "smart.nanddataWritten ${_nanddataWritten} $(date +%s)"
 			send_to_db "smart.DWPD ${_DWPD} $(date +%s)"
 			send_to_db "smart.temperature ${_temperature} $(date +%s)"
 			send_to_db "smart.percentage_used ${_percentage_used} $(date +%s)"
