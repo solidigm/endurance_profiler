@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.2.4"
+_version="v1.2.5"
 _service="$0"
 # remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
@@ -24,6 +24,7 @@ _VUsmart_F4_beforefile=/var/log/${_filename}/${_filename}.F4_before.var
 _VUsmart_F5_beforefile=/var/log/${_filename}/${_filename}.F5_before.var
 _timed_workload_startedfile=/var/log/${_filename}/${_filename}.timed_workload_started.var
 _timed_workload_startedepochfile=/var/log/${_filename}/${_filename}.timed_workload_startedepoch.var
+_data_units_read_beforefile=/var/log/${_filename}/${_filename}.data_units_read_before.var
 _dbfile=/var/log/${_filename}/${_filename}.db.var
 _nc_graphite_destinationfile=/var/log/${_filename}/${_filename}.nc_graphite_destination.var
 _nc_graphite_portfile=/var/log/${_filename}/${_filename}.nc_graphite_port.var
@@ -33,6 +34,7 @@ _db_not_supported="not logged"
 _TB_in_bytes=1000000000000
 _host_written_unit=$(( 32 * 1024 * 1024 ))
 _bandwidth_blocksize=512
+_logical_blocksize=512
 _minutes_in_day=1440
 _minutes_in_year=525600
 
@@ -405,6 +407,7 @@ function resetWorkloadTimer() {
 	local _nvme_namespace=""
 	local _VUsmart_F4_before=0
 	local _VUsmart_F5_before=0
+	local _data_units_read_before=0
 
 	# background process running
 	_nvme_namespace=$(retrieve_nvme_namespace)
@@ -417,8 +420,10 @@ function resetWorkloadTimer() {
 	log "[RESETWORKLOADTIMER] Workload Timer Reset on ${_nvme_device} at $(date)"
 	_VUsmart_F4_before=$(get_vusmart_log "${_nvme_namespace}" 0x89)
 	_VUsmart_F5_before=$(get_vusmart_log "${_nvme_namespace}" 0x95)
+	_data_units_read_before=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep -i "data units read" | awk '{print $5}' | sed 's/[^0-9]*//g')
 	echo "${_VUsmart_F4_before}" > "${_VUsmart_F4_beforefile}"
 	echo "${_VUsmart_F5_before}" > "${_VUsmart_F5_beforefile}"
+	echo "${_data_units_read_before}" > "${_data_units_read_beforefile}"
 	echo 0 > "${_WAFfile}"
 	date > "${_timed_workload_startedfile}"
 	date +"%s" > "${_timed_workload_startedepochfile}"
@@ -442,6 +447,12 @@ function info() {
 	local _hostWrites=0
 	local _dataWritten=0
 	local _dataWrittenTB=0
+	local _data_units_read_now=0
+	local _data_units_read_before=0
+	local _data_units_read=0
+	local _data_units_readTB=0
+	local _dataWritten_mbpers=0
+	local _data_units_read_mbpers=0
 
 	if status >/dev/null 2>&1 ; then
 		# background process running
@@ -468,6 +479,10 @@ function info() {
 		_hostWrites="${_VUsmart_F5}-${_VUsmart_F5_before}"
 		_dataWritten=$(echo "scale=0;(${_hostWrites})*${_host_written_unit}" | bc -l)
 		_dataWrittenTB=$(echo "scale=3;${_dataWritten}/${_TB_in_bytes}" | bc -l)
+		_data_units_read_before=$(cat "${_data_units_read_beforefile}")
+		_data_units_read_now=$(nvme smart-log /dev/"${_nvme_namespace}" 2>stderr | grep -i "data units read" | awk '{print $5}' | sed 's/[^0-9]*//g')
+		_data_units_read=$(( (_data_units_read_now-_data_units_read_before)*1000*_logical_blocksize ))
+		_data_units_readTB=$(echo "scale=3;${_data_units_read}/${_TB_in_bytes}" | bc -l)
 		log "Drive                               : ${_market_name} $((_tnvmcap/1000/1000/1000))GB"
 		log "Serial number                       : ${_serial_number}"
 		log "Firmware version                    : ${_firmware}"
@@ -507,9 +522,10 @@ function info() {
 			fi
 		fi
 		_elapsedtime=$(( $(date +"%s") - _timed_workload_startedepoch ))
-		_mbpers=$(echo "scale=2;${_dataWritten}/${_elapsedtime}/1000/1000" | bc -l)
-		log "Workload data written               : ${_dataWrittenTB/#./0.} TB (${_dataWritten} bytes) average speed ${_mbpers} MB/s"
-
+		_dataWritten_mbpers=$(echo "scale=2;${_dataWritten}/${_elapsedtime}/1000/1000" | bc -l)
+		_data_units_read_mbpers=$(echo "scale=2;${_data_units_read}/${_elapsedtime}/1000/1000" | bc -l)
+		log "Workload data written               : ${_dataWrittenTB/#./0.} TB (${_dataWritten} bytes) average speed ${_dataWritten_mbpers/#./0.} MB/s"
+		log "Workload data read                  : ${_data_units_readTB/#./0.} TB (${_data_units_read} bytes) average speed ${_data_units_read_mbpers/#./0.} MB/s"
 		return 0
 	else
 		# background process not running
@@ -729,6 +745,7 @@ touch "${_VUsmart_F4_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsm
 touch "${_VUsmart_F5_beforefile}" >/dev/null 2>&1 || log "Error creating ${_VUsmart_F5_beforefile}"
 touch "${_timed_workload_startedfile}" >/dev/null 2>&1 || log "Error creating ${_timed_workload_startedfile}"
 touch "${_timed_workload_startedepochfile}" >/dev/null 2>&1 || log "Error creating ${_timed_workload_startedepochfile}"
+touch "${_data_units_read_beforefile}" >/dev/null 2>&1 || log "Error creating ${_data_units_read_beforefile}"
 touch "${_dbfile}" >/dev/null 2>&1 || log "Error creating ${_dbfile}"
 touch "${_nc_graphite_destinationfile}" >/dev/null 2>&1 || log "Error creating ${_nc_graphite_destinationfile}"
 touch "${_nc_graphite_portfile}" >/dev/null 2>&1 || log "Error creating ${_nc_graphite_portfile}"
