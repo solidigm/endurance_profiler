@@ -10,7 +10,7 @@ _nc_graphite_port=2003
 _console_logging=true
 
 # Script variables, do not modify
-_version="v1.2.5"
+_version="v1.2.6"
 _service="$0"
 # remove any leading directory components and .sh
 _filename=$(basename "${_service}" .sh)
@@ -521,7 +521,7 @@ function info() {
 				log "Workload write rate                 : ${_DWPD/#./0.} DWPD"
 			fi
 		fi
-		_elapsedtime=$(( $(date +"%s") - _timed_workload_startedepoch ))
+		_elapsedtime=$(( $(date +"%s") - _timed_workload_startedepoch + 1 ))
 		_dataWritten_mbpers=$(echo "scale=2;${_dataWritten}/${_elapsedtime}/1000/1000" | bc -l)
 		_data_units_read_mbpers=$(echo "scale=2;${_data_units_read}/${_elapsedtime}/1000/1000" | bc -l)
 		log "Workload data written               : ${_dataWrittenTB/#./0.} TB (${_dataWritten} bytes) average speed ${_dataWritten_mbpers/#./0.} MB/s"
